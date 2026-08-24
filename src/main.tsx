@@ -1,12 +1,16 @@
-import { StrictMode, useEffect, useState, type CSSProperties } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient } from "convex/react";
-import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import App from "./App";
 import RulesPage from "./RulesPage";
 import AdminPage from "./AdminPage";
 import UpgradePage from "./UpgradePage";
+import { SignInPage } from "./SignIn";
+import { LandingPage } from "./LandingPage";
+import { AuthProvider } from "./auth";
 import "./styles.css";
+// After styles.css so the Council Seal tokens win on gameplay screens.
+import "./seal.css";
 
 const url = import.meta.env.VITE_CONVEX_URL as string;
 if (!url) {
@@ -19,27 +23,6 @@ if (!url) {
 
 const convex = new ConvexReactClient(url);
 
-function RoyalVoid() {
-  return (
-    <div className="royal-void" aria-hidden>
-      <div className="royal-void__lintel" />
-      <div className="royal-void__corona" />
-      <div className="royal-void__ring" />
-      <span className="royal-void__mote royal-void__mote--a" />
-      <span className="royal-void__mote royal-void__mote--b" />
-      <span className="royal-void__mote royal-void__mote--c" />
-      <span className="royal-void__mote royal-void__mote--d" />
-      <div className="royal-void__vignette" />
-    </div>
-  );
-}
-
-/** Palette used by the pages that sit outside a game room. */
-const PLAIN_THEME = {
-  "--theme-ink": "#051424",
-  "--theme-gold": "#f2ca50",
-  "--theme-parch": "#d4e4fa",
-} as CSSProperties;
 
 function Router() {
   const [hash, setHash] = useState(window.location.hash);
@@ -49,24 +32,51 @@ function Router() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const route = hash.startsWith("#/rules")
-    ? "rules"
-    : hash.startsWith("#/admin")
-      ? "admin"
-      : hash.startsWith("#/upgrade")
-        ? "upgrade"
-        : "game";
+  // An invite link (…/?code=ABCD) has to reach the table even though the
+  // index is now a holding page, so it counts as a request to play.
+  const invited = new URLSearchParams(window.location.search).has("code");
+
+  const route = hash.startsWith("#/signin")
+    ? "signin"
+    : hash.startsWith("#/rules")
+      ? "rules"
+      : hash.startsWith("#/admin")
+        ? "admin"
+        : hash.startsWith("#/upgrade")
+          ? "upgrade"
+          : hash.startsWith("#/play") || invited
+            ? "game"
+            : "landing";
+
+  // Everything outside a game room sits on the same board as the table, so the
+  // whole app reads as one surface.
+  // The landing page paints its own board, so it sits outside the shared shell.
+  if (route === "landing") {
+    return (
+      <div className="app-root">
+        <LandingPage />
+      </div>
+    );
+  }
+
+  if (route !== "game") {
+    return (
+      <div className="app-root">
+        <div className="vd-board">
+          <div className="vd-content">
+            {route === "signin" && <SignInPage />}
+            {route === "rules" && <RulesPage />}
+            {route === "admin" && <AdminPage />}
+            {route === "upgrade" && <UpgradePage />}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="app-root"
-      style={route === "game" ? undefined : PLAIN_THEME}
-    >
-      <RoyalVoid />
-      {route === "rules" && <RulesPage />}
-      {route === "admin" && <AdminPage />}
-      {route === "upgrade" && <UpgradePage />}
-      {route === "game" && <App />}
+    <div className="app-root">
+      <App />
     </div>
   );
 }
@@ -75,8 +85,8 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {/* Auth wraps everything: the admin console and the upgrade flow both need
         a signed-in identity, and the game reads entitlement from it. */}
-    <ConvexAuthProvider client={convex}>
+    <AuthProvider client={convex}>
       <Router />
-    </ConvexAuthProvider>
+    </AuthProvider>
   </StrictMode>,
 );

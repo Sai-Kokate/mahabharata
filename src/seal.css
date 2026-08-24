@@ -1,0 +1,1098 @@
+/* ============================================================================
+   Decevia — Council Seal design system
+   Drop into src/ and import once (e.g. in main.tsx, AFTER styles.css so these
+   tokens win). No gradients, no glow, no shadows: depth comes from 1px rules,
+   contrast and spacing.
+   ========================================================================== */
+
+:root {
+  /* --- surface ---------------------------------------------------------- */
+  --vd-bg:            #131110; /* the board */
+  --vd-bg-raised:     #191612; /* idle token face */
+  --vd-bg-token:      #1b1814; /* leader token face */
+  --vd-bg-plate:      #161311; /* modal / overlay plate */
+
+  /* --- rules: three weights, used consistently -------------------------- */
+  --vd-rule-structure: #221e19; /* column dividers */
+  --vd-rule-container: #2b2620; /* panel borders, section rules */
+  --vd-rule-control:   #342f26; /* control borders, segmented groups */
+  --vd-rule-strong:    #4c4234; /* emphasised container (role card, plate) */
+  --vd-rule-engraved:  #453c2f; /* engraved marks on the seal */
+
+  /* --- ink -------------------------------------------------------------- */
+  --vd-ink:        #efe7d5; /* primary text */
+  --vd-ink-soft:   #a89e90; /* body / chronicle */
+  --vd-ink-muted:  #8b8170; /* labels */
+  --vd-ink-dim:    #6d6458; /* tertiary, disabled */
+  --vd-ink-faint:  #5f574b; /* inscriptions */
+
+  /* --- materials -------------------------------------------------------- */
+  --vd-brass:       #c2a55f; /* aged brass: rules, ticks, state. NEVER a glow */
+  --vd-brass-edge:  #b39a5c; /* brass border on parchment */
+  --vd-parchment:   #e9e1cf; /* primary action + active tokens */
+  --vd-parchment-2: #e0d7c4; /* sigil ink on dark */
+  --vd-red:         #9e3b28; /* rejection / fail / evil */
+  --vd-red-ink:     #b5442e; /* red text (passes contrast on --vd-bg) */
+  --vd-red-rule:    #4a2620;
+
+  /* --- type ------------------------------------------------------------- */
+  --vd-display: "Cinzel", Georgia, serif;      /* headings, numerals */
+  --vd-voice: "EB Garamond", Georgia, serif;   /* the game's voice, italic */
+  --vd-ui: "Manrope", system-ui, sans-serif;   /* labels, data */
+
+  /* --- space (4px base) ------------------------------------------------- */
+  --vd-1: 4px;  --vd-2: 8px;  --vd-3: 12px; --vd-4: 16px;
+  --vd-5: 20px; --vd-6: 24px; --vd-8: 32px; --vd-10: 40px;
+}
+
+/* Cinzel, EB Garamond and Manrope are linked from index.html. */
+
+/* ============================================================================
+   Board
+   ========================================================================== */
+
+.vd-board {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--vd-bg);
+  color: var(--vd-ink);
+  font-family: var(--vd-ui);
+}
+
+/* Paper grain. Fixed 140px tile at 5% — must never be noticeable at a glance. */
+.vd-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27140%27%20height=%27140%27%3E%3Cfilter%20id=%27n%27%3E%3CfeTurbulence%20type=%27fractalNoise%27%20baseFrequency=%270.85%27%20numOctaves=%273%27/%3E%3C/filter%3E%3Crect%20width=%27140%27%20height=%27140%27%20filter=%27url%28%23n%29%27/%3E%3C/svg%3E");
+}
+
+
+.vd-content { position: relative; }
+
+/* ============================================================================
+   Typography
+   ========================================================================== */
+
+.vd-label {                       /* every piece of metadata in the UI */
+  font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--vd-ink-muted);
+}
+.vd-label--dim { color: var(--vd-ink-dim); }
+.vd-label--brass { color: var(--vd-brass); }
+
+.vd-h1 { font: 500 27px/1.1 var(--vd-display); color: var(--vd-ink); margin: 0; }
+.vd-h2 { font: 500 24px/1.12 var(--vd-display); color: var(--vd-ink); margin: 0; }
+.vd-numeral { font: 500 1em/1 var(--vd-display); }
+
+.vd-voice {                        /* the narrator */
+  font: italic 400 15px/1.55 var(--vd-voice);
+  color: var(--vd-ink-soft);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.vd-clock {
+  font: 500 52px/1 var(--vd-display);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--vd-ink);
+}
+@media (max-width: 720px) { .vd-clock { font-size: 38px; } }
+
+/* ============================================================================
+   Rules, panels, corner studs
+   ========================================================================== */
+
+.vd-rule { height: 1px; background: var(--vd-rule-container); border: 0; }
+.vd-rule--brass { background: var(--vd-brass); opacity: 0.5; }
+
+.vd-panel { border: 1px solid var(--vd-rule-container); padding: var(--vd-3) 13px; }
+.vd-panel--strong { border-color: var(--vd-rule-strong); }
+.vd-panel--danger { border-color: var(--vd-red-rule); }
+
+/* Brass studs at the corners. Reserved for objects with rank: the role card,
+   the quest plate, the verdict plate. Never on ordinary panels. */
+.vd-studded { position: relative; }
+.vd-studded::before,
+.vd-studded::after,
+.vd-studded > .vd-stud-b::before,
+.vd-studded > .vd-stud-b::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--vd-brass);
+}
+.vd-studded::before { top: -2px; left: -2px; }
+.vd-studded::after { top: -2px; right: -2px; }
+.vd-studded > .vd-stud-b { position: absolute; inset: 0; pointer-events: none; }
+.vd-studded > .vd-stud-b::before { bottom: -2px; left: -2px; }
+.vd-studded > .vd-stud-b::after { bottom: -2px; right: -2px; }
+
+/* ============================================================================
+   Controls
+   ========================================================================== */
+
+.vd-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vd-3);
+  width: 100%;
+  min-height: 56px;               /* never below 44px: phone in hand */
+  padding: 0 var(--vd-5);
+  border: 1px solid var(--vd-rule-control);
+  background: none;
+  color: var(--vd-ink-muted);
+  font: 500 15px/1 var(--vd-display);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.vd-btn:disabled { color: var(--vd-ink-dim); cursor: not-allowed; }
+
+/* Primary = a parchment control with an inset keyline. One per screen. */
+.vd-btn--primary {
+  position: relative;
+  background: var(--vd-parchment);
+  border-color: var(--vd-brass-edge);
+  color: #171410;
+}
+.vd-btn--primary::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(23, 20, 16, 0.14);
+  pointer-events: none;
+}
+.vd-btn--primary:hover { background: #f2ebda; }
+.vd-btn--primary:active { background: #ded5c2; }
+.vd-btn--danger { border-color: var(--vd-red); color: var(--vd-red-ink); }
+.vd-btn--danger:hover { background: rgba(158, 59, 40, 0.08); }
+.vd-btn__meta { font: 600 10.5px/1 var(--vd-ui); letter-spacing: 0.08em; color: var(--vd-ink-dim); }
+.vd-btn--primary .vd-btn__meta { color: #6d6458; }
+.vd-btn:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: 2px; }
+
+/* Segmented group — quest ladder, choices. Shared 1px rules, no gaps. */
+.vd-seg { display: flex; border: 1px solid var(--vd-rule-control); }
+.vd-seg > * {
+  flex: 1;
+  padding: 11px 0;
+  text-align: center;
+  border-left: 1px solid var(--vd-rule-control);
+}
+.vd-seg > *:first-child { border-left: 0; }
+.vd-seg > .is-active { background: var(--vd-brass); color: #171410; }
+
+/* Tick fuse — the clock, the vote counter, cards-in. Flat, no animation. */
+.vd-fuse { display: flex; gap: 4px; }
+.vd-fuse > i { flex: 1; height: 5px; background: #2c2721; }
+.vd-fuse > i.is-lit { background: var(--vd-brass); }
+.vd-fuse > i.is-spent { background: var(--vd-red); }
+
+/* Rejection track */
+.vd-track { display: flex; gap: 4px; }
+.vd-track > i { flex: 1; height: 4px; background: #2c2721; }
+.vd-track > i.is-used { background: var(--vd-red); }
+
+/* ============================================================================
+   The council seal
+   ========================================================================== */
+
+.vd-seal { position: relative; aspect-ratio: 1; width: 100%; max-width: 392px; margin-inline: auto; }
+/* Seat metrics come from CouncilSeal so one ring serves 5–18 seats. */
+
+.vd-seal__ring,
+.vd-seal__ring-inner {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.vd-seal__ring { inset: 8.7%; border: 1px solid var(--vd-rule-engraved); }
+.vd-seal__ring-inner { inset: 12.5%; border: 1px solid #272219; }
+
+/* Engraved marks + brass cardinal ticks. Each mark is a rotated wrapper so the
+   bar lands on the ring; keeps the whole seal in one stacking context. */
+.vd-seal__mark { position: absolute; inset: 0; pointer-events: none; }
+.vd-seal__mark > i {
+  position: absolute;
+  left: 50%;
+  top: 8.7%;
+  width: 1px;
+  height: 10px;
+  background: var(--vd-rule-engraved);
+}
+.vd-seal__mark--brass > i { top: 8%; height: 18px; background: var(--vd-brass); }
+
+.vd-seal__emblem {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 34%;
+  opacity: 0.32;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* --- seats --------------------------------------------------------------- */
+
+.vd-seat {
+  position: absolute;
+  translate: -50% -50%;
+  width: var(--vd-seat-w, 88px);
+  /* The children are spans; without a column flow the name and its state run
+     together on one line ("DewankHost"). */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.vd-seat__disc {
+  position: relative;
+  width: var(--vd-seat-disc, 62px);
+  height: var(--vd-seat-disc, 62px);
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--vd-bg-raised);
+  border: 1px solid #3a342b;
+  display: grid;
+  place-items: center;
+}
+.vd-seat__name { margin-top: 10px; font: 600 var(--vd-seat-name, 11.5px)/1.15 var(--vd-ui); color: var(--vd-ink-muted); }
+.vd-seat__state { margin-top: 4px; font: 700 8px/1 var(--vd-ui); letter-spacing: 0.16em; color: var(--vd-brass); }
+
+/* leader: brass rim + a brass bar beneath the disc */
+.vd-seat.is-leader .vd-seat__disc { background: var(--vd-bg-token); border-color: var(--vd-brass); }
+.vd-seat.is-leader .vd-seat__disc::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--vd-rule-engraved);
+}
+.vd-seat.is-leader .vd-seat__name { color: var(--vd-ink); }
+
+/* named / riding: the piece is lifted off the board — parchment, brass stud */
+.vd-seat.is-named .vd-seat__disc {
+  background: var(--vd-parchment);
+  border-color: var(--vd-brass-edge);
+}
+.vd-seat.is-named .vd-seat__disc::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(23, 20, 16, 0.18);
+}
+.vd-seat.is-named .vd-seat__stud {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  translate: -50% 0;
+  width: 9px;
+  height: 9px;
+  background: var(--vd-brass);
+}
+.vd-seat.is-named .vd-seat__name { color: var(--vd-ink); }
+
+.vd-seat.is-voted .vd-seat__disc { border-color: var(--vd-brass); }
+.vd-seat:disabled { cursor: default; }
+.vd-seat:focus-visible .vd-seat__disc { outline: 2px solid var(--vd-brass); outline-offset: 3px; }
+
+/* Phones: scale whatever the ring chose, so a 20-seat table still fits. */
+@media (max-width: 720px) {
+  .vd-seat { width: calc(var(--vd-seat-w, 88px) * 0.7); }
+  .vd-seat__disc {
+    width: calc(var(--vd-seat-disc, 62px) * 0.71);
+    height: calc(var(--vd-seat-disc, 62px) * 0.71);
+  }
+  .vd-seat__name { margin-top: 6px; font-size: calc(var(--vd-seat-name, 11.5px) * 0.85); }
+  .vd-seat__state { font-size: 7px; }
+}
+
+/* ============================================================================
+   Chronicle (the ledger)
+   ========================================================================== */
+
+.vd-chron__entry { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #272219; }
+.vd-chron__entry:last-child { border-bottom: 0; }
+.vd-chron__n { width: 26px; font: 500 20px/1 var(--vd-display); color: var(--vd-rule-engraved); }
+.vd-chron__text { margin: 0; font: 400 14.5px/1.5 var(--vd-voice); color: var(--vd-ink-soft); }
+.vd-chron__outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: var(--vd-2);
+  padding: 4px 8px;
+  border: 1px solid var(--vd-red-rule);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.18em;
+  color: var(--vd-red-ink);
+}
+.vd-chron__outcome--held { border-color: var(--vd-rule-strong); color: var(--vd-brass); }
+
+/* ============================================================================
+   Overlay plate (verdict, quest result)
+   ========================================================================== */
+
+.vd-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--vd-6);
+  background: rgba(10, 9, 8, 0.82);
+  z-index: 40;
+}
+.vd-plate {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 26px 22px 24px;
+  background: var(--vd-bg-plate);
+  border: 1px solid var(--vd-rule-strong);
+}
+.vd-plate--danger { border-color: var(--vd-red-rule); }
+.vd-plate--danger.vd-studded::before,
+.vd-plate--danger.vd-studded::after,
+.vd-plate--danger.vd-studded > .vd-stud-b::before,
+.vd-plate--danger.vd-studded > .vd-stud-b::after { background: var(--vd-red); }
+
+/* ============================================================================
+   The unveiling (vote verdict, quest deeds)
+   Sits on the overlay plate above. The tally borrows the segmented group's
+   shared 1px rules; the outcome is struck like a chronicle outcome.
+   ========================================================================== */
+
+/* Floats over the whole app, topbar included, so it outranks the plate above. */
+.vd-overlay--unveil { z-index: 80; }
+
+.vd-unveil { text-align: center; }
+.vd-unveil__eyebrow { display: block; letter-spacing: 0.32em; }
+.vd-unveil__title { margin-top: 13px; font-size: 30px; }
+.vd-unveil__note { margin-top: var(--vd-4); }
+
+/* The tally: two sides, one shared rule between them, numerals in Cinzel. */
+.vd-tally {
+  display: flex;
+  margin-top: var(--vd-5);
+  border: 1px solid var(--vd-rule-control);
+}
+.vd-tally__side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--vd-2);
+  padding: var(--vd-4) 0 15px;
+  border-left: 1px solid var(--vd-rule-control);
+}
+.vd-tally__side:first-child { border-left: 0; }
+.vd-tally__side .vd-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--vd-ink-muted);
+}
+.vd-tally__n {
+  font: 500 44px/1 var(--vd-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--vd-brass);
+}
+.vd-tally__side--no .vd-label { color: var(--vd-ink-dim); }
+.vd-tally__side--no .vd-tally__n { color: var(--vd-red-ink); }
+
+/* The outcome. Brass when it holds, red when it falls. Never a fill. */
+.vd-stamp {
+  display: inline-block;
+  margin-top: var(--vd-5);
+  padding: 11px 18px;
+  border: 1px solid var(--vd-brass);
+  font: 500 15px/1 var(--vd-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vd-brass);
+}
+.vd-stamp--fallen { border-color: var(--vd-red); color: var(--vd-red-ink); }
+
+/* Quest cards: backs matching .vd-back, turned over to parchment or red. */
+.vd-unveil__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--vd-2);
+  margin-top: var(--vd-5);
+}
+.vd-unveil__card { width: 56px; height: 80px; perspective: 900px; }
+.vd-unveil__card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.vd-unveil__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid var(--vd-rule-strong);
+  background: var(--vd-bg-raised);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+/* The back carries the engraved keyline the seal uses for unread things. */
+.vd-unveil__face--back::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--vd-rule-engraved);
+}
+.vd-unveil__face--front { transform: rotateY(180deg); }
+.vd-unveil__face--front.is-success {
+  background: var(--vd-parchment);
+  border-color: var(--vd-brass-edge);
+  color: #171410;
+}
+.vd-unveil__face--front.is-fail {
+  background: var(--vd-red);
+  border-color: var(--vd-red);
+  color: var(--vd-ink);
+}
+
+.vd-unveil__skip { margin-top: var(--vd-6); }
+
+/* ============================================================================
+   Sign in / create account
+   Our own component: the overlay plate's materials, the table's segmented
+   group, the parchment primary. Email and password only.
+   ========================================================================== */
+
+.vd-signin { width: min(420px, 100%); margin-inline: auto; }
+.vd-signin__eyebrow {
+  display: block;
+  margin-bottom: var(--vd-5);
+  text-align: center;
+  letter-spacing: 0.32em;
+}
+.vd-signin__seg { margin-bottom: var(--vd-5); }
+.vd-signin__tab {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: none;
+  color: var(--vd-ink-muted);
+  font: 500 14px/1 var(--vd-display);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.vd-signin__tab.is-active { background: var(--vd-brass); color: #171410; }
+
+/* The reveal toggle sits inside the field's own box, not beside it. */
+.vd-signin__pass { position: relative; }
+.vd-signin__peek {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 52px;
+  border: 0;
+  background: none;
+  color: var(--vd-ink-dim);
+  cursor: pointer;
+}
+.vd-signin__peek:hover { color: var(--vd-ink); }
+.vd-signin__pass .vd-field { padding-right: 46px; }
+
+.vd-signin__note { margin-top: var(--vd-4); text-align: center; font-size: 13.5px; }
+
+/* Recovery: the "we posted a code" line, and the detour links under the form. */
+.vd-signin__sent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: var(--vd-5);
+  font-size: 14px;
+}
+.vd-signin__sent > svg { flex: none; margin-top: 3px; color: var(--vd-brass); }
+.vd-signin__sent strong { color: var(--vd-ink); font-weight: 500; font-style: normal; }
+
+.vd-signin__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--vd-3);
+  margin-top: var(--vd-4);
+}
+.vd-signin__foot:empty { display: none; }
+.vd-signin__foot .vd-textbtn:hover { color: var(--vd-brass); }
+
+/* The standalone #/signin page: the card centred on the board. */
+.vd-signin-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vd-5);
+  padding: var(--vd-10) 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .vd-spin { animation: vd-spin 900ms linear infinite; }
+}
+@keyframes vd-spin { to { transform: rotate(360deg); } }
+
+/* ============================================================================
+   Landing — the front door at #/, while the game lives behind #/play
+   ========================================================================== */
+
+.lp { display: grid; place-items: center; padding: var(--vd-8) var(--vd-5); }
+.lp__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 560px;
+}
+
+.lp-mark { opacity: 0.95; margin-bottom: var(--vd-6); }
+
+/* Letters are individually wrapped so they can rise in sequence; the tracking
+   is on the wrapper so the spacing stays even. */
+.lp-wordmark {
+  display: flex;
+  margin: 0;
+  font: 500 clamp(38px, 9vw, 62px)/1 var(--vd-display);
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;          /* balances the trailing letter-space */
+  color: var(--vd-ink);
+}
+.lp-letter { display: inline-block; }
+
+.lp-promise {
+  margin: var(--vd-4) 0 0;
+  font: 700 10px/1 var(--vd-ui);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  text-transform: uppercase;
+  color: var(--vd-brass);
+}
+
+.lp-line {
+  width: 76px;
+  height: 1px;
+  margin: var(--vd-6) 0;
+  border: 0;
+  background: var(--vd-rule-strong);
+}
+
+.lp-lede { margin: 0; font: italic 400 16px/1.6 var(--vd-voice); color: var(--vd-ink-soft); }
+
+/* The holding state. A 1px container like everything else — the only movement
+   is the dot, so it reads as waiting rather than as a button to press. */
+.lp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--vd-8);
+  padding: 15px 26px;
+  border: 1px solid var(--vd-brass);
+  font: 500 14px/1 var(--vd-display);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--vd-brass);
+}
+.lp-cta__dot { width: 6px; height: 6px; background: var(--vd-brass); }
+
+.lp-foot {
+  display: flex;
+  gap: var(--vd-5);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--vd-8);
+}
+.lp-foot .vd-textbtn:hover { color: var(--vd-brass); }
+.lp-enter { color: var(--vd-ink-muted); }
+
+/* ============================================================================
+   Layout
+   ========================================================================== */
+
+.vd-table-layout {
+  display: grid;
+  grid-template-columns: 288px 1fr 274px;
+  min-height: 0;
+}
+.vd-table-layout > :first-child { padding-right: 30px; border-right: 1px solid var(--vd-rule-structure); }
+.vd-table-layout > :last-child { padding-left: 30px; border-left: 1px solid var(--vd-rule-structure); }
+
+@media (max-width: 1100px) {
+  .vd-table-layout { grid-template-columns: 1fr; gap: var(--vd-6); }
+  .vd-table-layout > :first-child,
+  .vd-table-layout > :last-child { padding: 0; border: 0; }
+}
+
+/* Mobile: the action sits in the thumb zone, above the safe area. */
+.vd-actionbar {
+  position: sticky;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--vd-bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .vd-btn { transition: background-color 120ms linear; }
+}
+
+/* ============================================================================
+   Shell — topbar, voice controls, action line
+   Added for the app; same rules as everything above: 1px borders, flat fills,
+   brass for state, radius 0, no shadows.
+   ========================================================================== */
+
+.vd-shell { display: flex; flex-direction: column; min-height: 100dvh; padding: 22px 36px 0; }
+@media (max-width: 720px) { .vd-shell { padding: 14px 16px 0; } }
+
+.vd-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--vd-4); flex-wrap: wrap;
+  padding-bottom: 15px; border-bottom: 1px solid var(--vd-rule-container);
+}
+.vd-topbar__left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.vd-topbar__emblem { mix-blend-mode: screen; opacity: 0.8; }
+.vd-topbar__brand { font: 500 15px/1 var(--vd-display); letter-spacing: 0.24em; }
+.vd-topbar__theme {
+  margin-left: 10px; padding-left: 12px;
+  border-left: 1px solid var(--vd-rule-container);
+  font: italic 400 14px/1 var(--vd-voice); color: var(--vd-ink-muted);
+}
+.vd-topbar__right { display: flex; align-items: center; gap: var(--vd-4); flex-wrap: wrap; }
+
+.vd-errline { margin-top: var(--vd-4); font: 400 13px/1.5 var(--vd-ui); color: var(--vd-red-ink); }
+
+.vd-actionline { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 11px; }
+
+/* Table body: the three columns, with the centre column stacking its own rows. */
+.vd-table { flex: 1; padding: 26px 0 30px; gap: var(--vd-6); }
+.vd-centre { display: flex; flex-direction: column; align-items: center; gap: var(--vd-5); padding: 0 30px; }
+.vd-centre > .vd-seal { width: 100%; max-width: 470px; }
+.vd-centre__wide { width: 100%; max-width: 470px; }
+@media (max-width: 1100px) { .vd-centre { padding: 0; order: -1; } }
+
+.vd-stack { display: flex; flex-direction: column; gap: var(--vd-4); }
+.vd-stack--tight { gap: var(--vd-2); }
+.vd-row { display: flex; align-items: center; gap: var(--vd-3); flex-wrap: wrap; }
+
+/* ============================================================================
+   Plates: a bordered row/tile used for names, candidates, allegiances
+   ========================================================================== */
+
+.vd-tile {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border: 1px solid var(--vd-rule-container);
+  background: var(--vd-bg-raised); color: var(--vd-ink);
+  font: 600 13px/1 var(--vd-ui); text-align: left; width: 100%;
+}
+.vd-tile--parchment { background: var(--vd-parchment); border-color: var(--vd-brass-edge); color: #171410; }
+.vd-tile--evil { background: rgba(158, 59, 40, 0.07); border-color: var(--vd-red-rule); }
+.vd-tile--brass { border-color: var(--vd-brass); }
+.vd-tile--btn { cursor: pointer; }
+.vd-tile--btn:hover:not(:disabled) { border-color: var(--vd-rule-strong); }
+.vd-tile:disabled { opacity: 0.5; cursor: default; }
+.vd-tile__meta { margin-left: auto; font: 700 8.5px/1 var(--vd-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--vd-ink-dim); }
+.vd-tile__seat { font: 500 13px/1 var(--vd-display); color: var(--vd-rule-engraved); min-width: 18px; }
+
+.vd-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--vd-2); }
+.vd-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--vd-2); }
+.vd-grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--vd-2); }
+@media (max-width: 720px) {
+  .vd-grid3 { grid-template-columns: 1fr 1fr; }
+  .vd-grid5 { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ============================================================================
+   The role card (night) — studded, parchment faces, brass for good / red evil
+   ========================================================================== */
+
+.vd-role {
+  padding: 22px 20px 20px; background: var(--vd-bg-plate);
+  border: 1px solid var(--vd-rule-strong);
+}
+.vd-role--evil { border-color: var(--vd-red-rule); }
+.vd-role--evil.vd-studded::before, .vd-role--evil.vd-studded::after,
+.vd-role--evil.vd-studded > .vd-stud-b::before, .vd-role--evil.vd-studded > .vd-stud-b::after {
+  background: var(--vd-red);
+}
+.vd-role__side { font: 700 8.5px/1 var(--vd-ui); letter-spacing: 0.26em; text-transform: uppercase; color: var(--vd-ink-muted); }
+.vd-role__name { margin: 9px 0 12px; font: 500 34px/1.05 var(--vd-display); color: var(--vd-ink); }
+.vd-role__hidden { margin: 9px 0 12px; font: 500 34px/1.05 var(--vd-display); color: var(--vd-rule-engraved); }
+
+/* Press-and-hold, never a tap toggle: the phone is held in a room of people. */
+.vd-hold {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 56px; margin-top: var(--vd-4);
+  border: 1px solid var(--vd-brass); background: transparent;
+  color: var(--vd-ink); font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.26em; text-transform: uppercase; cursor: pointer;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.vd-hold.is-holding { background: var(--vd-parchment); border-color: var(--vd-brass-edge); color: #171410; }
+
+/* The night script: NIGHT_ORDER with your own step struck in brass. */
+.vd-script__row {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 10px 11px; border-bottom: 1px solid var(--vd-rule-structure);
+}
+.vd-script__row.is-mine { background: rgba(194, 165, 95, 0.07); }
+.vd-script__n { font: 500 15px/1 var(--vd-display); color: var(--vd-rule-engraved); min-width: 16px; }
+.vd-script__row.is-mine .vd-script__n { color: var(--vd-brass); }
+.vd-script__text { font: italic 400 14px/1.5 var(--vd-voice); color: var(--vd-ink-dim); }
+.vd-script__row.is-mine .vd-script__text { color: var(--vd-ink-soft); }
+.vd-script__you { margin-left: auto; font: 700 7.5px/1 var(--vd-ui); letter-spacing: 0.2em; color: var(--vd-brass); }
+
+/* ============================================================================
+   Quest: the two card choices, and the anonymous result
+   ========================================================================== */
+
+.vd-cards { display: flex; gap: var(--vd-3); width: 100%; }
+.vd-card {
+  flex: 1; min-height: 150px; padding: 18px 16px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  border: 1px solid var(--vd-rule-control); background: var(--vd-bg-raised);
+  color: var(--vd-ink); cursor: pointer; text-align: left;
+}
+.vd-card--success { background: var(--vd-parchment); border-color: var(--vd-brass-edge); color: #171410; }
+.vd-card--fail { background: transparent; border-color: var(--vd-red-rule); color: var(--vd-red-ink); }
+.vd-card:disabled { opacity: 0.4; cursor: not-allowed; }
+.vd-card__name { font: 500 22px/1 var(--vd-display); }
+.vd-card__note { font: italic 400 12.5px/1.45 var(--vd-voice); opacity: 0.85; }
+
+/* Result: card backs, never hands. Failed slots filled red. */
+.vd-backs { display: flex; gap: var(--vd-2); justify-content: center; }
+.vd-back { width: 40px; height: 56px; border: 1px solid var(--vd-rule-strong); background: var(--vd-bg-raised); }
+.vd-back.is-fail { background: var(--vd-red); border-color: var(--vd-red); }
+
+/* ============================================================================
+   Watchers (the queue behind the table)
+   ========================================================================== */
+
+.vd-watchers { display: flex; flex-direction: column; gap: var(--vd-1); }
+.vd-watcher {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border: 1px solid var(--vd-rule-structure);
+  font: 600 12.5px/1 var(--vd-ui); color: var(--vd-ink-soft);
+}
+.vd-watcher__q { font: 500 12px/1 var(--vd-display); color: var(--vd-rule-engraved); min-width: 16px; }
+.vd-watcher__seat {
+  margin-left: auto; padding: 5px 9px;
+  border: 1px solid var(--vd-rule-control); background: transparent;
+  color: var(--vd-brass); font: 700 7.5px/1 var(--vd-ui);
+  letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+}
+.vd-watcher__seat:disabled { opacity: 0.4; cursor: default; }
+
+/* Plot strip: hand, private intel and log, under whichever board is up. */
+.vd-plotstrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--vd-5);
+  padding: 24px 0 34px;
+  margin-top: var(--vd-4);
+  border-top: 1px solid var(--vd-rule-container);
+}
+.vd-plotstrip:empty { display: none; }
+
+/* ============================================================================
+   Lobby configuration: option toggles, world picker, invite line
+
+   These live in a full-width strip under the table, not the 274px sidebar, so
+   the rows get enough width to keep every label on one line.
+   ========================================================================== */
+
+.vd-setup {
+  border-top: 1px solid var(--vd-rule-container);
+  padding: 26px 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-6);
+}
+.vd-setup__group { display: flex; flex-direction: column; gap: 11px; }
+.vd-setup__note { margin: 0; font-size: 13px; }
+
+/* Both grids fit as many columns as the width allows, so nothing wraps. */
+.vd-opts,
+.vd-worlds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+  gap: var(--vd-2);
+  align-items: stretch;
+}
+
+.vd-opt,
+.vd-world {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  min-height: 62px;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--vd-rule-control);
+  background: transparent;
+  color: var(--vd-ink-soft);
+}
+.vd-opt:hover:not(:disabled),
+.vd-world:hover:not(:disabled) { border-color: var(--vd-rule-strong); }
+.vd-opt.is-on,
+.vd-world.is-on {
+  border-color: var(--vd-brass);
+  background: rgba(194, 165, 95, 0.07);
+  color: var(--vd-ink);
+}
+.vd-opt:disabled,
+.vd-world:disabled { opacity: 0.42; cursor: not-allowed; }
+
+/* Name row: mark, name, then the state badge pinned right. One line. */
+.vd-opt__top,
+.vd-world__body {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+}
+.vd-opt__name,
+.vd-world__name {
+  font: 600 12.5px/1.25 var(--vd-ui);
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+}
+.vd-opt__top > svg:last-child { flex: none; margin-left: auto; }
+
+.vd-opt__desc,
+.vd-world__sub {
+  font: italic 400 11.5px/1.35 var(--vd-voice);
+  color: var(--vd-ink-dim);
+  display: block;
+}
+
+.vd-opt__lock {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;          /* "paid" must never wrap under the padlock */
+  font: 700 7.5px/1 var(--vd-ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--vd-brass);
+}
+
+/* Which side a role joins, as a 2px inner edge rather than a fill. */
+.vd-opt--good.is-on { box-shadow: inset 2px 0 0 var(--vd-brass); }
+.vd-opt--evil.is-on { box-shadow: inset 2px 0 0 var(--vd-red); }
+
+/* The world tiles carry their subtitle inside the body row. */
+.vd-world { flex-direction: row; align-items: center; }
+.vd-world__body { flex-direction: column; align-items: flex-start; gap: 3px; }
+
+.vd-invite {
+  display: flex; align-items: center; gap: var(--vd-3); flex-wrap: wrap;
+  padding: 12px 14px; border: 1px solid var(--vd-rule-strong);
+}
+.vd-invite__code {
+  font: 500 26px/1 var(--vd-display); letter-spacing: 0.2em; color: var(--vd-brass);
+}
+.vd-invite__btn {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; min-height: 40px;
+  border: 1px solid var(--vd-rule-control); background: transparent;
+  color: var(--vd-ink-soft); font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
+}
+.vd-invite__btn:hover { color: var(--vd-ink); border-color: var(--vd-brass); }
+
+.vd-textbtn {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 700 8px/1 var(--vd-ui); letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--vd-ink-dim);
+}
+.vd-textbtn:hover { color: var(--vd-red-ink); }
+
+/* Topbar account controls */
+.vd-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border: 1px solid var(--vd-rule-control);
+  font: 700 8px/1 var(--vd-ui); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--vd-ink-muted); text-decoration: none; background: transparent; cursor: pointer;
+}
+.vd-pill:hover { color: var(--vd-ink); border-color: var(--vd-rule-strong); }
+.vd-pill--brass { border-color: var(--vd-brass); color: var(--vd-brass); }
+
+
+/* ============================================================================
+   The gate (create / join) and the shared field control
+   ========================================================================== */
+
+.vd-gate {
+  max-width: 460px;
+  margin-inline: auto;
+  padding: 56px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-6);
+}
+.vd-gate__head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vd-gate__brand { margin: 0; font: 500 30px/1 var(--vd-display); letter-spacing: 0.26em; color: var(--vd-ink); }
+.vd-gate__promise {
+  margin: 0;
+  letter-spacing: 0.32em;
+  color: var(--vd-brass);
+  opacity: 0.85;
+}
+.vd-gate__tag { max-width: 380px; }
+.vd-gate__card { padding: 22px 20px; background: var(--vd-bg-plate); border: 1px solid var(--vd-rule-strong); }
+.vd-gate__card .vd-seg { margin-bottom: var(--vd-5); }
+.vd-gate__hint { margin: 12px 0 16px; font-size: 13.5px; }
+.vd-gate__worlds { }
+.vd-gate__foot { display: flex; gap: var(--vd-2); justify-content: center; flex-wrap: wrap; }
+
+.vd-field__label {
+  display: block; margin: 0 0 7px;
+  font: 700 8.5px/1 var(--vd-ui); letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--vd-ink-muted);
+}
+.vd-field {
+  width: 100%; min-height: 52px; padding: 0 14px; margin-bottom: var(--vd-4);
+  border: 1px solid var(--vd-rule-control); background: var(--vd-bg-raised);
+  color: var(--vd-ink); font: 600 16px/1 var(--vd-ui); /* 16px avoids iOS zoom */
+}
+.vd-field:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: 2px; }
+.vd-field::placeholder { color: var(--vd-ink-dim); font-weight: 400; }
+.vd-field--code {
+  font: 500 26px/1 var(--vd-display); letter-spacing: 0.34em;
+  text-transform: uppercase; text-align: center;
+}
+
+/* ============================================================================
+   Rules / admin / upgrade — remapped onto the Council Seal palette.
+
+   Those pages were authored against the older indigo-and-gold theme variables.
+   Rather than rewrite their markup, remap the variables they read and flatten
+   the two things the language forbids: rounded corners and shadows.
+   ========================================================================== */
+
+.rules-page {
+  --theme-ink: var(--vd-bg);
+  --theme-gold: var(--vd-brass);
+  --theme-gold-dim: var(--vd-brass-edge);
+  --theme-parch: var(--vd-ink);
+  --theme-parch-dim: var(--vd-ink-muted);
+  --theme-good: var(--vd-brass);
+  --theme-evil: var(--vd-red-ink);
+  --theme-line: var(--vd-rule-control);
+  color: var(--vd-ink);
+  font-family: var(--vd-ui);
+}
+
+/* Radius 0 and no shadows, everywhere on these pages. */
+.rules-page *,
+.rules-page *::before,
+.rules-page *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+/* The one exception the language allows: sigil / token discs. */
+.rules-page .vd-seat__disc { border-radius: 50% !important; }
+
+.rules-page h1 { font-family: var(--vd-display); font-weight: 500; letter-spacing: 0.02em; }
+.rules-page h2 { font-family: var(--vd-display); font-weight: 500; }
+.rules-page .rules-lede,
+.rules-page .rules-note,
+.rules-page .rules-section > p { font-family: var(--vd-voice); font-style: italic; }
+.rules-page .rules-kicker { font-family: var(--vd-ui); letter-spacing: 0.26em; }
+
+.rules-page .rules-section { border-top: 1px solid var(--vd-rule-container); }
+/* The hero is a stack, not a line. `.rules-back` is inline-block and
+   `.rules-kicker` is inline-flex, so left to themselves they share a row and
+   run into each other — the back link's margin-bottom does nothing there.
+   A flex column separates them and lets the link sit out at the left edge,
+   where it reads as navigation rather than part of the title block. */
+.rules-page .rules-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--vd-3);
+  text-align: center;
+  border-bottom: 1px solid var(--vd-rule-container);
+  padding-bottom: 24px;
+}
+.rules-page .rules-back {
+  align-self: flex-start;
+  margin: 0 0 var(--vd-2);
+  font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--vd-ink-muted);
+}
+.rules-page .rules-back:hover { color: var(--vd-brass); }
+.rules-page .rules-kicker,
+.rules-page .rules-hero h1,
+.rules-page .rules-hero .rules-lede { margin: 0; }
+
+/* Panels, cards and chips all become 1px containers on the board. */
+.rules-page .rules-callouts > article,
+.rules-page .rules-win__card,
+.rules-page .rules-role,
+.rules-page .rules-map,
+.rules-page .rules-sight__row,
+.rules-page .admin-order,
+.rules-page .admin-tile,
+.rules-page .billing-status,
+.rules-page .billing-plan,
+.rules-page .vd-panel {
+  background: var(--vd-bg-raised);
+  border: 1px solid var(--vd-rule-container);
+}
+.rules-page .rules-win__card--good { border-color: var(--vd-rule-strong); }
+.rules-page .rules-win__card--evil { border-color: var(--vd-red-rule); background: rgba(158, 59, 40, 0.07); }
+.rules-page .rules-chip,
+.rules-page .rules-pill,
+.rules-page .billing-badge,
+.rules-page .rules-theme-btn { border: 1px solid var(--vd-rule-control); background: transparent; }
+.rules-page .rules-theme-btn.is-on,
+.rules-page .rules-size-picker__btns button.is-on { background: var(--vd-brass); color: #171410; }
+.rules-page .billing-qr__frame { background: #fff; border: 2px solid var(--vd-brass); }
+
+/* The board is full-bleed: the old .app-root padding framed it in theme colour. */
+.app-root { padding: 0; min-height: 100dvh; }
+body { background: var(--vd-bg); }
+
+/* Safe-area insets belong to the board's own containers now. */
+.vd-shell { padding-left: max(36px, env(safe-area-inset-left)); padding-right: max(36px, env(safe-area-inset-right)); }
+@media (max-width: 720px) {
+  .vd-shell { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+}
+.vd-center { display: grid; place-items: center; min-height: 100dvh; }
+
+/* The gate's world picker is inside a 460px card, so pin it to two columns. */
+.vd-gate__worlds .vd-worlds { grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .vd-gate__worlds .vd-worlds { grid-template-columns: 1fr; } }

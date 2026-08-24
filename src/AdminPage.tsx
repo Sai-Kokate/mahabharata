@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuth } from "./auth";
 import {
   BadgeCheck, Ban, Check, Clock, Crown, Gift, Loader2, LogOut, RefreshCw,
   ScrollText, Shield, Trash2, Users, X,
@@ -21,7 +21,7 @@ const fmtWhen = (ms: number) =>
 type Tab = "orders" | "subs" | "users" | "grant";
 
 export default function AdminPage() {
-  const { signOut } = useAuthActions();
+  const { signOut } = useAuth();
   const viewer = useQuery(api.billing.viewer, {});
   const [tab, setTab] = useState<Tab>("orders");
   const [msg, setMsg] = useState("");
@@ -54,13 +54,13 @@ export default function AdminPage() {
     return (
       <div className="rules-page">
         <header className="rules-hero">
-          <a className="rules-back" href="#/">← Back to council</a>
+          <a className="rules-back" href="#/play">← Back to council</a>
           <p className="rules-kicker"><Shield size={14} /> Admin</p>
           <h1>Admin console</h1>
           <p className="rules-lede">Sign in to continue.</p>
         </header>
         <section className="rules-section">
-          <SignInCard passwordAuthEnabled={viewer.passwordAuthEnabled} />
+          <SignInCard />
         </section>
       </div>
     );
@@ -71,7 +71,7 @@ export default function AdminPage() {
     return (
       <div className="rules-page">
         <header className="rules-hero">
-          <a className="rules-back" href="#/">← Back to council</a>
+          <a className="rules-back" href="#/play">← Back to council</a>
           <p className="rules-kicker"><Shield size={14} /> Admin</p>
           <h1>Not your console</h1>
           <p className="rules-lede">
@@ -92,7 +92,7 @@ export default function AdminPage() {
   return (
     <div className="rules-page">
       <header className="rules-hero">
-        <a className="rules-back" href="#/">← Back to council</a>
+        <a className="rules-back" href="#/play">← Back to council</a>
         <p className="rules-kicker"><Shield size={14} /> Admin</p>
         <h1>Admin console</h1>
         <p className="rules-lede">
@@ -465,7 +465,7 @@ function Grant({
       <h2><Gift size={18} /> Grant a plan directly</h2>
       <p className="rules-note">
         For comps, testing, or a payment you took outside the app. The person
-        must have signed in with Google at least once so the account exists.
+        must have created an account at least once, so the account exists.
       </p>
       <label className="field-label">Owner email</label>
       <input

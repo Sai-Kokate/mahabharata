@@ -65,24 +65,89 @@ export function currentTeam(role: Role, lancelotSwapped: boolean): Team {
 
 /* ------------------------------ setup matrix ---------------------------- */
 
-export const TEAM_COUNTS: Record<number, [number, number]> = {
+/**
+ * Avalon's printed matrix, 5–10 players. These rows are the source of truth and
+ * are never computed.
+ */
+const OFFICIAL_TEAMS: Record<number, [number, number]> = {
   5: [3, 2], 6: [4, 2], 7: [4, 3], 8: [5, 3], 9: [6, 3], 10: [6, 4],
 };
 
-export const QUEST_SIZES: Record<number, number[]> = {
+const OFFICIAL_QUESTS: Record<number, number[]> = {
   5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4],
   8: [3, 4, 4, 5, 5], 9: [3, 4, 4, 5, 5], 10: [3, 4, 4, 5, 5],
 };
 
-/** The 4th quest (0-indexed 3) needs 2 fails — only at 7+ players. */
-export const DOUBLE_FAIL_QUEST = 3;
+/* ---------------------------------------------------------------------------
+   Above ten players the game is a HOUSE RULE — the wiki defines no split and no
+   mission sizes there. Rather than invent numbers, both are extrapolated from
+   the printed table's own arithmetic:
 
-export function failsNeeded(playerCount: number, questIndex: number): number {
-  return questIndex === DOUBLE_FAIL_QUEST && playerCount >= 7 ? 2 : 1;
+     evil = ceil(n / 3)   reproduces all six official rows exactly
+                          (5→2, 6→2, 7→3, 8→3, 9→3, 10→4)
+
+     mission sizes are flat at [3,4,4,5,5] across 8–10, so each further three
+     players adds one to every mission.
+
+   `test-seating` asserts both formulas still reproduce the official rows, so a
+   future edit cannot quietly break 5–10.
+   ------------------------------------------------------------------------- */
+
+/** Evil seats at a given head count. Matches the printed table for 5–10. */
+export function evilCount(playerCount: number): number {
+  return Math.ceil(playerCount / 3);
+}
+
+const QUEST_BASE = [3, 4, 4, 5, 5];
+
+export function questSizesFor(playerCount: number): number[] {
+  const official = OFFICIAL_QUESTS[playerCount];
+  if (official) return official;
+  const step = Math.floor((playerCount - 8) / 3);
+  return QUEST_BASE.map((v) => v + step);
 }
 
 export const MIN_PLAYERS = 5;
-export const MAX_PLAYERS = 10;
+/** Ceiling on players IN A GAME. Beyond it, arrivals become watchers. */
+export const MAX_PLAYERS = 18;
+
+function buildMatrix() {
+  const teams: Record<number, [number, number]> = {};
+  const quests: Record<number, number[]> = {};
+  for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
+    const official = OFFICIAL_TEAMS[n];
+    const evil = official ? official[1] : evilCount(n);
+    teams[n] = [n - evil, evil];
+    quests[n] = questSizesFor(n);
+  }
+  return { teams, quests };
+}
+
+const MATRIX = buildMatrix();
+
+export const TEAM_COUNTS: Record<number, [number, number]> = MATRIX.teams;
+export const QUEST_SIZES: Record<number, number[]> = MATRIX.quests;
+
+/** Kept for the 4th-quest marker; see `doubleFailQuests` for the full set. */
+export const DOUBLE_FAIL_QUEST = 3;
+
+/**
+ * Which quests (0-indexed) need two fails to sink.
+ *
+ * Avalon: the 4th, at 7+ players. HOUSE RULE above ten: the 3rd as well, because
+ * parties grow with the head count and a lone saboteur would otherwise be aboard
+ * nearly every mission.
+ */
+export function doubleFailQuests(playerCount: number): number[] {
+  const out: number[] = [];
+  if (playerCount >= 11) out.push(2);
+  if (playerCount >= 7) out.push(3);
+  return out;
+}
+
+export function failsNeeded(playerCount: number, questIndex: number): number {
+  return doubleFailQuests(playerCount).includes(questIndex) ? 2 : 1;
+}
 export const MAX_REJECTS = 5;
 
 /** Leader clock: discuss, then extra time to lock the war party. */
@@ -198,10 +263,88 @@ export function premiumBlockReason(
   return null;
 }
 
-/** How many players a room may seat, given its premium standing. */
+/* ------------------------------ seating -------------------------------- */
+
+/**
+ * How many players a room may SEAT, given its premium standing. Avalon has no
+ * team split or mission matrix above ten, so this is the ceiling on the game
+ * itself — not on how many people may be in the room. See `splitSeating`.
+ */
 export function seatCap(premium: boolean, seats: number): number {
   if (!premium) return MAX_PLAYERS;
   return Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, seats));
+}
+
+/**
+ * Hard ceiling on total room size. Joins past the seat cap become watchers
+ * rather than errors, so something has to stop a room growing without bound.
+ */
+export const ROOM_CAPACITY = 40;
+
+export type SeatedPlayer = { playerId: string; seat: number };
+
+export type Seating<T extends SeatedPlayer> = {
+  /** The players actually in the game — at most `cap` of them. */
+  seated: T[];
+  /** Everyone else, in a stable queue: they watch and never receive a role. */
+  watching: T[];
+  /** True when the room is holding more people than the table can take. */
+  overflowing: boolean;
+  cap: number;
+};
+
+/**
+ * Split a roster into the players at the table and the watchers behind them.
+ *
+ * Seats are kept DENSE (0..n-1) everywhere else in the codebase — `leaveRoom`
+ * reindexes on every departure — so "watcher" is simply `seat >= cap`. That is
+ * what makes promotion free: compacting seats after someone leaves slides the
+ * first watcher into the game with no extra bookkeeping.
+ */
+export function splitSeating<T extends SeatedPlayer>(
+  players: T[],
+  cap: number,
+): Seating<T> {
+  const ordered = [...players].sort((a, b) => a.seat - b.seat);
+  return {
+    seated: ordered.slice(0, cap),
+    watching: ordered.slice(cap),
+    overflowing: ordered.length > cap,
+    cap,
+  };
+}
+
+/**
+ * Renumber a roster to dense seats in its current order. Returns only the
+ * players whose seat actually moved, so a caller can patch the minimum.
+ */
+export function compactSeats<T extends SeatedPlayer>(
+  players: T[],
+): Array<{ player: T; seat: number }> {
+  const ordered = [...players].sort((a, b) => a.seat - b.seat);
+  const moved: Array<{ player: T; seat: number }> = [];
+  ordered.forEach((p, i) => {
+    if (p.seat !== i) moved.push({ player: p, seat: i });
+  });
+  return moved;
+}
+
+/**
+ * Exchange two players' seats. Used by the host to pull a specific watcher to
+ * the table; density is preserved because it is a straight swap.
+ */
+export function swapSeats<T extends SeatedPlayer>(
+  players: T[],
+  aId: string,
+  bId: string,
+): Array<{ player: T; seat: number }> | null {
+  const a = players.find((p) => p.playerId === aId);
+  const b = players.find((p) => p.playerId === bId);
+  if (!a || !b || a.playerId === b.playerId) return null;
+  return [
+    { player: a, seat: b.seat },
+    { player: b, seat: a.seat },
+  ];
 }
 
 /** How many good/evil slots the optional roles consume. */
