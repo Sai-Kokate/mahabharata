@@ -239,6 +239,13 @@ export default defineSchema({
     name: v.string(),
     seat: v.number(),
     role: v.optional(role),
+    /**
+     * When a seated player walked out mid-game. The seat is KEPT — deleting it
+     * would resize the table under a deck already dealt — so this is how the
+     * room says "this chair is empty" without corrupting the game. Cleared by
+     * rejoining; irrelevant in the lobby, where leaving just removes the row.
+     */
+    departedAt: v.optional(v.number()),
   })
     .index("by_room", ["roomId"])
     .index("by_room_player", ["roomId", "playerId"]),

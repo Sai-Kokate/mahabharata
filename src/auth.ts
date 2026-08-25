@@ -8,15 +8,40 @@
    plain `{ ok }` result out, no thrown errors for the caller to decode.
    ========================================================================== */
 
-import { useCallback } from "react";
+import { createElement, useCallback } from "react";
+import type { ReactNode } from "react";
 import { ConvexAuthProvider, useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
+import type { ConvexReactClient } from "convex/react";
 
 /**
- * The provider that has to wrap the app. Re-exported from here so `main.tsx`
- * never names the vendor either — this file stays the only one that does.
+ * The provider that has to wrap the app. Wrapped here rather than re-exported
+ * so `main.tsx` still never names the vendor — and so of one setting:
+ *
+ * `shouldHandleCode`. On mount the provider looks for `?code=` in the URL and,
+ * if it finds one, spends it as an OAuth/magic-link credential — deleting the
+ * parameter and, crucially, skipping the read of the stored session. Our invite
+ * links are `?code=ABCD`, a four-letter room code. Every player who joined by
+ * link therefore arrived signed out, with the room code stripped out of their
+ * URL. Nothing in this app ever authenticates from a URL — passwords and reset
+ * codes are both typed into a form — so the answer is simply never.
+ *
+ * Written with `createElement` to keep this file .ts: it is the auth surface,
+ * not a screen, and one element is not worth a rename.
  */
-export const AuthProvider = ConvexAuthProvider;
+export function AuthProvider({
+  client,
+  children,
+}: {
+  client: ConvexReactClient;
+  children: ReactNode;
+}) {
+  return createElement(ConvexAuthProvider, {
+    client,
+    shouldHandleCode: () => false,
+    children,
+  });
+}
 
 /** Sign-in and account creation are the same form with two intents. */
 export type AuthFlow = "signIn" | "signUp";

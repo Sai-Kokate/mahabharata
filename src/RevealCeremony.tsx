@@ -15,6 +15,9 @@ export type LastVote = {
   approved: boolean;
   approvers: string[];
   rejecters: string[];
+  /** The same two lists as names. Avalon's votes are public — show them. */
+  approverNames: string[];
+  rejecterNames: string[];
   /** Name of the player who overturned an approved party with King Returns. */
   overturnedBy?: string | null;
 };
@@ -53,6 +56,13 @@ export function RevealCeremony({
   lastQuest: LastQuest | null;
 }) {
   const [mode, setMode] = useState<"vote" | "quest" | null>(null);
+  /**
+   * The outcome is red or brass, and the plate wears it — so it cannot wear it
+   * from the first frame. Eight players watched the border turn red while the
+   * cards were still face down, which gave the quest away every time. The
+   * unveils flip this on once they have actually shown the result.
+   */
+  const [settled, setSettled] = useState(false);
   const [vote, setVote] = useState<LastVote | null>(null);
   const [quest, setQuest] = useState<LastQuest | null>(null);
   const lastVoteRef = useRef<string>("");
@@ -67,6 +77,7 @@ export function RevealCeremony({
     sessionStorage.setItem(seenKey("vote", id), "1");
     setVote(lastVote);
     setQuest(null);
+    setSettled(false);
     setMode("vote");
   }, [code, lastVote]);
 
@@ -79,6 +90,7 @@ export function RevealCeremony({
     sessionStorage.setItem(seenKey("quest", id), "1");
     setQuest(lastQuest);
     setVote(null);
+    setSettled(false);
     setMode("quest");
   }, [code, lastQuest]);
 
@@ -98,15 +110,23 @@ export function RevealCeremony({
       aria-modal="true"
     >
       <div
-        className={`vd-plate vd-studded ${fallen ? "vd-plate--danger" : ""}`}
+        className={`vd-plate vd-studded ${fallen && settled ? "vd-plate--danger" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <span className="vd-stud-b" aria-hidden />
         {mode === "vote" && vote && (
-          <VoteUnveil vote={vote} onDone={() => setMode(null)} />
+          <VoteUnveil
+            vote={vote}
+            onSettled={() => setSettled(true)}
+            onDone={() => setMode(null)}
+          />
         )}
         {mode === "quest" && quest && (
-          <QuestUnveil quest={quest} onDone={() => setMode(null)} />
+          <QuestUnveil
+            quest={quest}
+            onSettled={() => setSettled(true)}
+            onDone={() => setMode(null)}
+          />
         )}
         <button
           type="button"
@@ -120,12 +140,16 @@ export function RevealCeremony({
   );
 }
 
-function VoteUnveil({ vote, onDone }: { vote: LastVote; onDone: () => void }) {
+function VoteUnveil({
+  vote, onSettled, onDone,
+}: { vote: LastVote; onSettled: () => void; onDone: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const yes = vote.approvers.length;
   const no = vote.rejecters.length;
   const done = useRef(onDone);
   done.current = onDone;
+  const settled = useRef(onSettled);
+  settled.current = onSettled;
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -138,6 +162,7 @@ function VoteUnveil({ vote, onDone }: { vote: LastVote; onDone: () => void }) {
           { y: 12, opacity: 0, stagger: 0.12, duration: 0.45 },
           "-=0.1",
         )
+        .add(() => settled.current())
         .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.15")
         .to({}, { duration: 1.4 })
         .add(() => done.current());
@@ -158,12 +183,20 @@ function VoteUnveil({ vote, onDone }: { vote: LastVote; onDone: () => void }) {
             <Check size={11} strokeWidth={2.5} /> Support
           </span>
           <strong className="vd-tally__n">{yes}</strong>
+          <ul className="vd-tally__who">
+            {vote.approverNames.map((nm) => <li key={nm}>{nm}</li>)}
+            {yes === 0 && <li className="is-none">no one</li>}
+          </ul>
         </div>
         <div className="vd-tally__side vd-tally__side--no">
           <span className="vd-label">
             <X size={11} strokeWidth={2.5} /> Oppose
           </span>
           <strong className="vd-tally__n">{no}</strong>
+          <ul className="vd-tally__who">
+            {vote.rejecterNames.map((nm) => <li key={nm}>{nm}</li>)}
+            {no === 0 && <li className="is-none">no one</li>}
+          </ul>
         </div>
       </div>
 
@@ -184,7 +217,9 @@ function VoteUnveil({ vote, onDone }: { vote: LastVote; onDone: () => void }) {
   );
 }
 
-function QuestUnveil({ quest, onDone }: { quest: LastQuest; onDone: () => void }) {
+function QuestUnveil({
+  quest, onSettled, onDone,
+}: { quest: LastQuest; onSettled: () => void; onDone: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const cards = useMemo(() => {
     const deck: Array<"success" | "fail"> = [
@@ -196,6 +231,8 @@ function QuestUnveil({ quest, onDone }: { quest: LastQuest; onDone: () => void }
 
   const done = useRef(onDone);
   done.current = onDone;
+  const settled = useRef(onSettled);
+  settled.current = onSettled;
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -219,6 +256,8 @@ function QuestUnveil({ quest, onDone }: { quest: LastQuest; onDone: () => void }
           },
           "+=0.25",
         )
+        // Every card is face up by here — only now may the plate say how it went.
+        .add(() => settled.current())
         .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.1")
         .to({}, { duration: 1.5 })
         .add(() => done.current());

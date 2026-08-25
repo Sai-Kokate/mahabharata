@@ -7,14 +7,14 @@ import {
   TEAM_COUNTS, QUEST_SIZES, DISCUSS_MS, SELECT_MS,
   PLOT_DEAL_MS, KING_RETURNS_MS, EXCALIBUR_MS, LADY_MS,
   MAX_PLAYERS, MAX_REJECTS, MIN_PLAYERS,
-  buildRoles, knownNames, normalizeOpts, validateSetup,
+  buildRoles, knownNames, normalizeOpts, normalizeName, validateSetup,
   currentTeam, allowedQuestCards, clampQuestCard, failsNeeded, ROLE_TEAM,
   buildLoyaltyDeck, drawsLoyaltyThisRound,
   buildPlotDeck, plotCardsPerRound, PLOT_CARDS, PlotCardId,
   LADY_MIN_PLAYERS, ladyActiveAfterQuest,
   nightStep, NIGHT_ORDER,
   premiumBlockReason, premiumOptsUsed, isPremiumTheme, seatCap,
-  stripPremiumOpts, PREMIUM_OPT_KEYS, PREMIUM_OPT_LABELS,
+  stripPremiumOpts, PREMIUM_OPT_KEYS, PREMIUM_OPT_LABELS, FREE_THEME_IDS,
   ROOM_CAPACITY, splitSeating, compactSeats, swapSeats,
   Role, QuestCard, Opts,
 } from "./logic";
@@ -69,6 +69,38 @@ async function seatedOf(ctx: MutationCtx | QueryCtx, room: Doc<"rooms">) {
   return (await seatingOf(ctx, room)).seated;
 }
 
+/**
+ * The seated players who are still at the table.
+ *
+ * A seat cannot be removed mid-game without resizing the table under a deck
+ * already dealt, so someone who walks out keeps theirs — which means every
+ * "has everyone answered yet?" test has to be counted against the people who
+ * can actually answer. Counting the full roster instead is a deadlock: the
+ * round waits forever on a vote that is never coming.
+ *
+ * Rules sizing still reads the FULL seated roster. Losing a player must not
+ * quietly change the team split or the quest sizes mid-game.
+ */
+function presentOf<T extends { departedAt?: number }>(seated: T[]): T[] {
+  return seated.filter((p) => p.departedAt === undefined);
+}
+
+/**
+ * Pass the seal on if the host is the one who just walked out.
+ *
+ * Restart, Close council and New council are all host-only, and mid-game the
+ * host keeps their seat rather than being deleted — so without this, a host who
+ * leaves takes every way out of the room with them and the table is stuck until
+ * the sweep collects it hours later.
+ */
+async function handOverHostIfGone(ctx: MutationCtx, room: Doc<"rooms">) {
+  const players = await playersOf(ctx, room._id);
+  const host = players.find((p) => p.playerId === room.hostId);
+  if (host && host.departedAt === undefined) return;
+  const heir = presentOf(players)[0];
+  if (heir) await ctx.db.patch(room._id, { hostId: heir.playerId });
+}
+
 /** Keep seats dense so `splitSeating` and every positional index stay valid. */
 async function recompactSeats(ctx: MutationCtx, roomId: Id<"rooms">) {
   const all = await playersOf(ctx, roomId);
@@ -118,6 +150,21 @@ async function clearSubmissions(ctx: MutationCtx, roomId: Id<"rooms">) {
     .withIndex("by_room_to", (q) => q.eq("roomId", roomId))
     .collect();
   for (const s of secrets) await ctx.db.delete(s._id);
+}
+
+/**
+ * Delete a room and everything hanging off it. `clearSubmissions` covers the
+ * per-round rows; the players and the room itself are what is left. Without
+ * this a deleted room used to orphan its player rows forever.
+ */
+async function purgeRoom(ctx: MutationCtx, roomId: Id<"rooms">) {
+  await clearSubmissions(ctx, roomId);
+  const players = await ctx.db
+    .query("players")
+    .withIndex("by_room", (q) => q.eq("roomId", roomId))
+    .collect();
+  for (const p of players) await ctx.db.delete(p._id);
+  await ctx.db.delete(roomId);
 }
 
 async function handOf(ctx: MutationCtx | QueryCtx, roomId: Id<"rooms">, playerId: string) {
@@ -211,7 +258,7 @@ async function enterPropose(ctx: MutationCtx, roomId: Id<"rooms">, patch: RoomPa
   if (!after) return;
   await ctx.scheduler.runAfter(
     DISCUSS_MS + SELECT_MS,
-    internal.avalon.forceProposeIfNeeded,
+    internal.avalon.passSealIfLeaderIsSilent,
     { roomId, roundId: after.roundId },
   );
 }
@@ -317,12 +364,14 @@ async function resolveVotes(
   ctx: MutationCtx,
   room: Doc<"rooms">,
   players: Doc<"players">[],
+  /** This round's votes, when the caller has already read them. */
+  known?: Doc<"votes">[],
 ) {
-  const votes = await ctx.db
+  const votes = known ?? (await ctx.db
     .query("votes")
     .withIndex("by_room_round", (q) =>
       q.eq("roomId", room._id).eq("roundId", room.roundId))
-    .collect();
+    .collect());
   const approvers = votes.filter((x) => x.choice === "approve").map((x) => x.playerId);
   const rejecters = votes.filter((x) => x.choice === "reject").map((x) => x.playerId);
   // A tie rejects: the party needs a strict majority to ride out.
@@ -524,6 +573,44 @@ const optsValidator = v.object({
   goodMayFail: v.optional(v.boolean()),
 });
 
+/**
+ * Mint an empty lobby with one player in seat 0. Shared by `createRoom` and
+ * `startFreshRoom`, so a replacement room is built by exactly the same code
+ * that builds a first one — including the entitlement check, which a caller
+ * carrying options over from an old room must not be able to skip.
+ */
+async function mintRoom(
+  ctx: MutationCtx,
+  { playerId, name, themeId, opts }:
+  { playerId: string; name: string; themeId: string | undefined; opts: Partial<Opts> },
+) {
+  const resolvedTheme = themeId ?? "india";
+  if (!THEMES[resolvedTheme]) throw new Error(`Theme ${resolvedTheme} not found.`);
+  const normalized = normalizeOpts(opts);
+  await assertMayUse(ctx, resolvedTheme, normalized);
+  const host = await signedInUser(ctx);
+  let code = makeCode();
+  for (let i = 0; i < 6 && (await roomByCode(ctx, code)); i++) code = makeCode();
+  const roomId = await ctx.db.insert("rooms", {
+    code,
+    themeId: resolvedTheme,
+    hostId: playerId,
+    hostUserId: host?._id,
+    phase: "lobby",
+    leaderIndex: 0,
+    roundId: 0,
+    questIndex: 0,
+    questResults: [null, null, null, null, null],
+    rejectCount: 0,
+    proposedTeam: [],
+    opts: normalized,
+  });
+  await ctx.db.insert("players", {
+    roomId, playerId, name: normalizeName(name), seat: 0,
+  });
+  return { code };
+}
+
 export const createRoom = mutation({
   args: {
     playerId: v.string(),
@@ -531,63 +618,60 @@ export const createRoom = mutation({
     themeId: v.optional(v.string()),
     opts: optsValidator,
   },
-  handler: async (ctx, { playerId, name, themeId, opts }) => {
-    const resolvedTheme = themeId ?? "india";
-    if (!THEMES[resolvedTheme]) throw new Error(`Theme ${resolvedTheme} not found.`);
-    const normalized = normalizeOpts(opts);
-    await assertMayUse(ctx, resolvedTheme, normalized);
-    const host = await signedInUser(ctx);
-    let code = makeCode();
-    for (let i = 0; i < 6 && (await roomByCode(ctx, code)); i++) code = makeCode();
-    const roomId = await ctx.db.insert("rooms", {
-      code,
-      themeId: resolvedTheme,
-      hostId: playerId,
-      hostUserId: host?._id,
-      phase: "lobby",
-      leaderIndex: 0,
-      roundId: 0,
-      questIndex: 0,
-      questResults: [null, null, null, null, null],
-      rejectCount: 0,
-      proposedTeam: [],
-      opts: normalized,
-    });
-    await ctx.db.insert("players", { roomId, playerId, name: name.trim(), seat: 0 });
-    return { code };
-  },
+  handler: async (ctx, { playerId, name, themeId, opts }) =>
+    await mintRoom(ctx, { playerId, name, themeId, opts }),
 });
 
 export const joinRoom = mutation({
-  args: { code: v.string(), playerId: v.string(), name: v.string() },
-  handler: async (ctx, { code, playerId, name }) => {
+  args: {
+    code: v.string(),
+    playerId: v.string(),
+    name: v.string(),
+    /** Take over the seat already sitting under this name. See below. */
+    rejoin: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { code, playerId, name, rejoin }) => {
     const room = requireRoom(await roomByCode(ctx, code));
     const players = await playersOf(ctx, room._id);
-    const trimmed = name.trim();
+    const trimmed = normalizeName(name);
     if (!trimmed) throw new Error("Speak your name first.");
 
     // Same tab/session: reclaim this playerId's seat (survives refresh).
     const byId = players.find((p) => p.playerId === playerId);
     if (byId) {
-      if (byId.name !== trimmed && room.phase === "lobby") {
+      // Both sides are folded even though writes are now normalised: a room
+      // opened before this change can still be holding a mixed-case name.
+      if (normalizeName(byId.name) !== trimmed && room.phase === "lobby") {
         const taken = players.some(
           (p) =>
             p.playerId !== playerId &&
-            p.name.toLowerCase() === trimmed.toLowerCase(),
+            normalizeName(p.name) === trimmed,
         );
         if (taken) throw new Error(`The name "${trimmed}" is already taken.`);
         await ctx.db.patch(byId._id, { name: trimmed });
       }
-      return { code: room.code, playerId };
+      // Coming back to a seat you had walked out of re-fills it.
+      if (byId.departedAt !== undefined) {
+        await ctx.db.patch(byId._id, { departedAt: undefined });
+      }
+      return { code: room.code, playerId, status: "joined" as const };
     }
 
-    const byName = players.find(
-      (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
-    );
+    // A phone that lost its tab lost its `playerId` with it, and the seat it
+    // left behind still holds the role, the votes and the quest card. Handing
+    // the ORIGINAL id back to the new tab reunites the two without rewriting a
+    // single row — which is why this returns rather than patching anything.
+    //
+    // It is a deliberate two-step: an unasked-for rejoin would let anyone who
+    // knows the code and a name take that seat, and its role with it. The
+    // client has to come back and ask for it by name.
+    const byName = players.find((p) => normalizeName(p.name) === trimmed);
     if (byName) {
-      throw new Error(
-        `The name "${trimmed}" is already seated. Pick a unique name — each tab is its own warrior.`,
-      );
+      if (!rejoin) {
+        return { code: room.code, playerId, status: "nameTaken" as const };
+      }
+      await ctx.db.patch(byName._id, { departedAt: undefined });
+      return { code: room.code, playerId: byName.playerId, status: "rejoined" as const };
     }
 
     if (room.phase !== "lobby") throw new Error("That game has already started.");
@@ -599,7 +683,7 @@ export const joinRoom = mutation({
     await ctx.db.insert("players", {
       roomId: room._id, playerId, name: trimmed, seat: players.length,
     });
-    return { code: room.code, playerId };
+    return { code: room.code, playerId, status: "joined" as const };
   },
 });
 
@@ -611,13 +695,30 @@ export const leaveRoom = mutation({
     const players = await playersOf(ctx, room._id);
     const me = players.find((p) => p.playerId === playerId);
 
-    // Mid-game, only a watcher may slip out: removing a seated player would
-    // orphan their role, votes and quest card.
+    // Whatever the phase, the last person out closes the room behind them.
+    // There is no game left to protect once the table is empty, and a room that
+    // is never closed is a room that lives forever.
+    if (players.length <= 1 && (players.length === 0 || me)) {
+      await purgeRoom(ctx, room._id);
+      return;
+    }
+
+    // Mid-game a watcher can simply go — they hold nothing. A SEATED player
+    // cannot be deleted: the table would resize under a deck already dealt, and
+    // their id is still sitting in `proposedTeam`, in the votes and in the quest
+    // cards. So the seat stays and is marked empty, which does two useful
+    // things — the table can see who walked out, and `joinRoom`'s rejoin path
+    // still has a seat to hand back.
     if (room.phase !== "lobby") {
+      if (!me) return;
       const { watching } = await seatingOf(ctx, room);
-      if (!me || !watching.some((w) => w.playerId === playerId)) return;
-      await ctx.db.delete(me._id);
-      await recompactSeats(ctx, room._id);
+      if (watching.some((w) => w.playerId === playerId)) {
+        await ctx.db.delete(me._id);
+        await recompactSeats(ctx, room._id);
+        return;
+      }
+      await ctx.db.patch(me._id, { departedAt: Date.now() });
+      await handOverHostIfGone(ctx, room);
       return;
     }
 
@@ -625,7 +726,7 @@ export const leaveRoom = mutation({
 
     const rest = players.filter((p) => p.playerId !== playerId);
     if (rest.length === 0) {
-      await ctx.db.delete(room._id);
+      await purgeRoom(ctx, room._id);
       return;
     }
     // Reindex seats to stay dense — this is also what promotes the first
@@ -636,6 +737,131 @@ export const leaveRoom = mutation({
     if (room.hostId === playerId) {
       await ctx.db.patch(room._id, { hostId: rest[0].playerId });
     }
+  },
+});
+
+/**
+ * How long an untouched room lives. A long evening of five quests fits inside
+ * it with room to spare, and nothing shorter is safe: a table that breaks for
+ * dinner should not come back to a deleted game.
+ */
+const ROOM_TTL_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Rooms whose players all closed a tab never call `leaveRoom`, so nothing ever
+ * tells the server the table went home. This is the backstop: once a day, any
+ * room older than the TTL is purged with everything hanging off it.
+ */
+export const sweepAbandonedRooms = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - ROOM_TTL_MS;
+    // The rooms table holds one row per live game, so a full scan here is
+    // cheaper than carrying an index only this sweep would ever read.
+    const rooms = await ctx.db.query("rooms").collect();
+    let purged = 0;
+    for (const room of rooms) {
+      if (room._creationTime >= cutoff) continue;
+      await purgeRoom(ctx, room._id);
+      purged++;
+    }
+    return { purged, scanned: rooms.length };
+  },
+});
+
+/**
+ * The host disbands the council outright. `leaveRoom` only closes a room when
+ * the last person walks out, and a table of eight rarely leaves one at a time.
+ */
+export const closeRoom = mutation({
+  args: { code: v.string(), playerId: v.string() },
+  handler: async (ctx, { code, playerId }) => {
+    const room = await roomByCode(ctx, code);
+    if (!room) return;
+    if (room.hostId !== playerId) throw new Error("Only the host can close the council.");
+    await purgeRoom(ctx, room._id);
+  },
+});
+
+/**
+ * Tear this council down and convene a fresh one.
+ *
+ * Distinct from both neighbours on purpose. `newGame` keeps the room, the code
+ * and everyone in it — the same table playing again. `closeRoom` ends things
+ * and sends everybody back to the gate. This is the third case a real table
+ * asked for: the lobby itself is wrong — stale seats, the wrong host, someone
+ * who left still holding a place — and what is wanted is a clean room under a
+ * new code, with the world and the options already set the way they were.
+ *
+ * Everyone else is dropped, because a new code is the point: their client finds
+ * the old room gone and returns to the gate. Only the host comes across.
+ */
+export const startFreshRoom = mutation({
+  args: { code: v.string(), playerId: v.string() },
+  handler: async (ctx, { code, playerId }) => {
+    const room = requireRoom(await roomByCode(ctx, code));
+    if (room.hostId !== playerId) throw new Error("Only the host can convene a new council.");
+    const players = await playersOf(ctx, room._id);
+    const me = players.find((p) => p.playerId === playerId);
+    if (!me) throw new Error("You are not at this table.");
+
+    // Read what we are carrying over BEFORE the old room stops existing.
+    const carried = { themeId: room.themeId, opts: normalizeOpts(room.opts), name: me.name };
+    await purgeRoom(ctx, room._id);
+
+    // A plan that lapsed mid-session must not ride along on the old room's
+    // settings, so drop the paid ones rather than failing the reset outright.
+    const ent = await callerEntitlement(ctx);
+    const opts = ent.premium ? carried.opts : stripPremiumOpts(carried.opts);
+    const themeId =
+      !ent.premium && isPremiumTheme(carried.themeId ?? "india")
+        ? FREE_THEME_IDS[0]
+        : carried.themeId;
+
+    return await mintRoom(ctx, { playerId, name: carried.name, themeId, opts });
+  },
+});
+
+/**
+ * The host turns someone out of the room, and they are free to come back.
+ *
+ * Different from every neighbour: `leaveRoom` is you going of your own accord,
+ * `closeRoom` takes the whole council down. This is for the case a real table
+ * ran into — a ghost seat left by a dead tab, or somebody who joined twice
+ * under two names, sitting there counting against the table size and blocking
+ * the start. Removing them frees the seat AND the name, so they can rejoin
+ * straight away with the same code.
+ *
+ * Mid-game a seated player still cannot be deleted — the table would resize
+ * under a deck already dealt — so they are marked away instead, which is the
+ * same state as walking out, and their seat waits for them.
+ */
+export const removePlayer = mutation({
+  args: { code: v.string(), playerId: v.string(), targetId: v.string() },
+  handler: async (ctx, { code, playerId, targetId }) => {
+    const room = requireRoom(await roomByCode(ctx, code));
+    if (room.hostId !== playerId) throw new Error("Only the host can remove someone.");
+    if (targetId === playerId) throw new Error("Use Leave council to remove yourself.");
+
+    const players = await playersOf(ctx, room._id);
+    const target = players.find((p) => p.playerId === targetId);
+    if (!target) throw new Error("They are not in this room.");
+
+    if (room.phase === "lobby") {
+      await ctx.db.delete(target._id);
+      await recompactSeats(ctx, room._id);
+      return { removed: true as const };
+    }
+
+    const { watching } = await seatingOf(ctx, room);
+    if (watching.some((w) => w.playerId === targetId)) {
+      await ctx.db.delete(target._id);
+      await recompactSeats(ctx, room._id);
+      return { removed: true as const };
+    }
+
+    await ctx.db.patch(target._id, { departedAt: Date.now() });
+    return { removed: false as const };
   },
 });
 
@@ -783,24 +1009,44 @@ export const beginQuests = mutation({
   },
 });
 
-export const forceProposeIfNeeded = internalMutation({
+/**
+ * The leader let the clock run out.
+ *
+ * The seal passes to the next warrior still at the table and the SAME quest is
+ * proposed again. It used to auto-lock a party instead — leader plus whoever
+ * came next — which put a team nobody chose in front of the council and made
+ * going quiet a way to force a vote.
+ *
+ * A skipped turn is deliberately NOT a rejection: the council never met, so it
+ * cannot have turned anything down, and the rejection track stays where it is.
+ * The trade-off is that a table can rotate the seal indefinitely if everyone
+ * stays silent — nothing here breaks a game that nobody is playing.
+ */
+export const passSealIfLeaderIsSilent = internalMutation({
   args: { roomId: v.id("rooms"), roundId: v.number() },
   handler: async (ctx, { roomId, roundId }) => {
     const room = await ctx.db.get(roomId);
+    // A proposal that landed in time bumped `roundId`, so this is stale.
     if (!room || room.phase !== "propose" || room.roundId !== roundId) return;
     const seated = await seatedOf(ctx, room);
     if (seated.length === 0) return;
-    const size = QUEST_SIZES[seated.length]?.[room.questIndex];
-    if (!size) return;
-    const leader = seated[room.leaderIndex] ?? seated[0];
-    const rest = seated.filter((p) => p.playerId !== leader.playerId);
-    const team = [leader.playerId, ...rest.map((p) => p.playerId)].slice(0, size);
-    const opts = normalizeOpts(room.opts);
-    // Excalibur must go to a party member other than the leader.
-    const excaliburHolder = opts.excalibur
-      ? team.find((id) => id !== leader.playerId)
-      : undefined;
-    await ctx.db.patch(roomId, { phase: "vote", proposedTeam: team, excaliburHolder });
+
+    // The next seat round the table that still has somebody in it. Walking the
+    // whole ring means a row of departed players is stepped over in one go.
+    let next: number | null = null;
+    for (let step = 1; step <= seated.length; step++) {
+      const i = (room.leaderIndex + step) % seated.length;
+      if (seated[i]?.departedAt === undefined) { next = i; break; }
+    }
+    // Nobody is left to hold it. Stop rather than reschedule forever.
+    if (next === null) return;
+
+    await enterPropose(ctx, roomId, {
+      leaderIndex: next,
+      roundId: room.roundId + 1,
+      proposedTeam: [],
+      excaliburHolder: undefined,
+    });
   },
 });
 
@@ -906,6 +1152,17 @@ export const proposeTeam = mutation({
     if (leader.playerId !== playerId) throw new Error("Only the leader proposes.");
     const size = QUEST_SIZES[seated.length][room.questIndex];
     if (team.length !== size) throw new Error(`Party must be ${size} knights.`);
+    // Naming someone who has left is the same deadlock: their quest card never
+    // arrives and the quest can never finish.
+    const gone = team.filter((id) =>
+      seated.some((p) => p.playerId === id && p.departedAt !== undefined),
+    );
+    if (gone.length > 0) {
+      const names = gone.map((id) => seated.find((p) => p.playerId === id)?.name ?? id);
+      throw new Error(
+        `${names.join(", ")} ${gone.length === 1 ? "has" : "have"} left the table. Name someone else, or restart.`,
+      );
+    }
     // Watchers are not in the game, so they can never ride.
     const ids = new Set(seated.map((p) => p.playerId));
     if (team.some((id) => !ids.has(id))) throw new Error("Party must be seated warriors.");
@@ -946,23 +1203,38 @@ export const castVote = mutation({
       throw new Error("Watchers do not vote.");
     }
 
-    const existing = (
-      await ctx.db.query("votes")
-        .withIndex("by_room_round", (q) =>
-          q.eq("roomId", room._id).eq("roundId", room.roundId))
-        .collect()
-    ).find((x) => x.playerId === playerId);
-
-    if (existing) await ctx.db.patch(existing._id, { choice });
-    else await ctx.db.insert("votes", {
-      roomId: room._id, roundId: room.roundId, playerId, choice,
-    });
-
-    const votes = await ctx.db.query("votes")
+    // One read of this round's votes serves all three jobs below: finding my
+    // own vote, counting whether the round is complete, and — passed through —
+    // resolving it. It used to be fetched three separate times per vote cast,
+    // which at eight players is sixteen redundant index reads per round.
+    const before = await ctx.db.query("votes")
       .withIndex("by_room_round", (q) =>
         q.eq("roomId", room._id).eq("roundId", room.roundId))
       .collect();
-    if (votes.length >= seated.length) await resolveVotes(ctx, room, seated);
+    const existing = before.find((x) => x.playerId === playerId);
+
+    let votes: Doc<"votes">[];
+    if (existing) {
+      await ctx.db.patch(existing._id, { choice });
+      votes = before.map((v) => (v._id === existing._id ? { ...v, choice } : v));
+    } else {
+      const _id = await ctx.db.insert("votes", {
+        roomId: room._id, roundId: room.roundId, playerId, choice,
+      });
+      // Every field is known, so the row is assembled rather than read back.
+      votes = [...before, {
+        _id,
+        _creationTime: Date.now(),
+        roomId: room._id,
+        roundId: room.roundId,
+        playerId,
+        choice,
+      }];
+    }
+
+    if (votes.length >= presentOf(seated).length) {
+      await resolveVotes(ctx, room, seated, votes);
+    }
   },
 });
 
@@ -1004,7 +1276,14 @@ export const playQuestCard = mutation({
       .withIndex("by_room_quest", (q) =>
         q.eq("roomId", room._id).eq("questIndex", room.questIndex))
       .collect();
-    if (cards.length >= room.proposedTeam.length) await afterAllQuestCards(ctx, room);
+    // Same deadlock, and the quest phase has no clock to rescue it: a rider who
+    // walks out after the party was approved would hold the mission open
+    // forever. Wait only on riders still at the table. The fail threshold is
+    // deliberately NOT adjusted — the quest is played by whoever is left.
+    const riding = room.proposedTeam.filter((id) =>
+      seated.some((p) => p.playerId === id && p.departedAt === undefined),
+    ).length;
+    if (cards.length >= riding) await afterAllQuestCards(ctx, room);
   },
 });
 
@@ -1463,7 +1742,6 @@ export const getRoom = query({
     // Paywall state. `room` follows the HOST's plan; `caller` is about me, so the
     // lobby can offer the right prompt (sign in / upgrade / already covered).
     const roomEnt = roomEnt0;
-    const callerEnt = await callerEntitlement(ctx);
 
     let known: string[] = [];
     if (me?.role) {
@@ -1534,15 +1812,16 @@ export const getRoom = query({
         themeIsPremium: isPremiumTheme(room.themeId),
         labels: PREMIUM_OPT_LABELS,
       },
-      caller: {
-        signedIn: callerEnt.signedIn,
-        email: callerEnt.email,
-        premium: callerEnt.premium,
-        isAdmin: callerEnt.isAdmin,
-        /** True when I am the host and my own plan is what unlocks this room. */
-        iUnlockThisRoom:
-          room.hostId === playerId && callerEnt.premium,
-      },
+      /*
+       * There was a `caller` block here — signedIn / email / premium / isAdmin
+       * for the viewer. Nothing ever read it: the client takes its identity
+       * from `billing.viewer`, which is its own subscription. It cost a
+       * `callerEntitlement` on every run of the hottest query in the app —
+       * an auth-session read, a user get, a seats index query and a
+       * subscription get — and it put `users`, `seats` and `authSessions` in
+       * this query's read set, so signing in anywhere re-ran the whole table
+       * view for every player. Deleted; use `billing.viewer`.
+       */
       failsNeeded: failsNeeded(n, room.questIndex),
       lastVote: room.lastVote ?? null,
       lastQuest: room.lastQuest ?? null,
@@ -1643,6 +1922,8 @@ export const getRoom = query({
         name: p.name,
         seat: p.seat,
         isHost: p.playerId === room.hostId,
+        /** Walked out and has not come back. The seat is theirs until they do. */
+        away: p.departedAt !== undefined,
         role: ended ? p.role ?? null : null, // reveal only at end
         // Final allegiance matters at the reveal when a Lancelot has switched.
         team: ended && p.role ? currentTeam(p.role as Role, swapped) : null,
@@ -1660,6 +1941,8 @@ export const getRoom = query({
       seating: {
         cap,
         seatedCount: seated.length,
+        /** Seats whose player walked out. The table stalls on these. */
+        awayNames: seated.filter((p) => p.departedAt !== undefined).map((p) => p.name),
         watcherCount: watching.length,
         overflowing,
         roomCapacity: ROOM_CAPACITY,

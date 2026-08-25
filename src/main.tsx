@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient } from "convex/react";
 import App from "./App";
@@ -8,6 +8,7 @@ import UpgradePage from "./UpgradePage";
 import { SignInPage } from "./SignIn";
 import { LandingPage } from "./LandingPage";
 import { AuthProvider } from "./auth";
+import { adoptLegacyHashRoute, useLinkInterception, useLocation } from "./router";
 import "./styles.css";
 // After styles.css so the Council Seal tokens win on gameplay screens.
 import "./seal.css";
@@ -23,28 +24,30 @@ if (!url) {
 
 const convex = new ConvexReactClient(url);
 
+// Before the first render, so `useLocation` never sees the hash form.
+adoptLegacyHashRoute();
+
 
 function Router() {
-  const [hash, setHash] = useState(window.location.hash);
-  useEffect(() => {
-    const onHash = () => setHash(window.location.hash);
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+  const { pathname, search } = useLocation();
+  useLinkInterception();
 
   // An invite link (…/?code=ABCD) has to reach the table even though the
   // index is now a holding page, so it counts as a request to play.
-  const invited = new URLSearchParams(window.location.search).has("code");
+  const invited = new URLSearchParams(search).has("code");
 
-  const route = hash.startsWith("#/signin")
+  const at = (path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+
+  const route = at("/signin")
     ? "signin"
-    : hash.startsWith("#/rules")
+    : at("/rules")
       ? "rules"
-      : hash.startsWith("#/admin")
+      : at("/admin")
         ? "admin"
-        : hash.startsWith("#/upgrade")
+        : at("/upgrade")
           ? "upgrade"
-          : hash.startsWith("#/play") || invited
+          : at("/play") || invited
             ? "game"
             : "landing";
 

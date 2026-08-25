@@ -1,5 +1,5 @@
 /* ============================================================================
-   The front door — a static holding page while the game is still behind /play.
+   The front door. The doors are open: two ways in, and no holding state.
 
    The animation earns its place by saying what the product is: the mark turns
    once and its two counter-dots trade sides, which is the whole premise —
@@ -9,7 +9,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import markSrc from "./assets/mark.svg";
 
 const WORDMARK = "DECEVIA";
@@ -41,18 +41,12 @@ export function LandingPage() {
         )
         .from(".lp-line", { scaleX: 0, duration: 0.6 }, "-=0.4")
         .from(".lp-lede", { y: 12, opacity: 0, duration: 0.5 }, "-=0.3")
-        .from(".lp-cta", { y: 14, opacity: 0, duration: 0.5 }, "-=0.25")
+        .from(
+          ".lp-act",
+          { y: 14, opacity: 0, stagger: 0.09, duration: 0.5 },
+          "-=0.25",
+        )
         .from(".lp-foot", { opacity: 0, duration: 0.5 }, "-=0.2");
-
-      // The waiting signal: one slow brass pulse on the dot, forever. A border
-      // that breathes would read as a glow, which the system does not allow.
-      gsap.to(".lp-cta__dot", {
-        opacity: 0.25,
-        duration: 1.4,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
     }, root);
     return () => ctx.revert();
   }, []);
@@ -79,18 +73,20 @@ export function LandingPage() {
           some of you are lying about it. Five worlds to find out in.
         </p>
 
-        <div className="lp-cta">
-          <span className="lp-cta__dot" aria-hidden />
-          Coming soon
+        {/* Two doors, weighted. Joining is what most arrivals came to do and
+            needs no account; signing up is what unlocks the paid worlds, so it
+            stands beside rather than in front. */}
+        <div className="lp-acts">
+          <a className="lp-act lp-act--primary" href="/play">
+            Join the council <ArrowRight size={16} />
+          </a>
+          <a className="lp-act" href="/signin">
+            Sign up <Sparkles size={15} />
+          </a>
         </div>
 
         <div className="lp-foot">
-          {/* The way in while the front door is still shut. Delete this link
-              when the game opens to everyone and /play becomes the index. */}
-          <a className="vd-textbtn lp-enter" href="#/play">
-            Enter the council <ArrowRight size={11} />
-          </a>
-          <a className="vd-textbtn" href="#/rules">
+          <a className="vd-textbtn" href="/rules">
             Read the laws
           </a>
         </div>

@@ -5,7 +5,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { RevealCeremony } from "./RevealCeremony";
 import { Table, type TableActions } from "./table";
+import { displayName } from "./table/types";
 import emblemSrc from "./assets/mark.svg";
+import { navigate } from "./router";
 import { THEMES, THEME_LIST } from "../convex/themes";
 import { isPremiumTheme } from "../convex/logic";
 import {
@@ -77,6 +79,8 @@ export default function App() {
     sessionStorage.getItem("decevia.code"),
   );
   const [msg, setMsg] = useState("");
+  /** Set when a name is already seated: the seat we may take back over. */
+  const [rejoinName, setRejoinName] = useState<string | null>(null);
   const [opts, setOpts] = useState({
     percival: true,
     morgana: true,
@@ -103,22 +107,46 @@ export default function App() {
     }
   }, []);
 
+  // The room lives in the URL so a refresh — or a link sent to a friend — lands
+  // back at the same table. Canonicalised to /play, so an invite opened at
+  // /?code=ABCD does not leave the app sitting on the landing route.
   useEffect(() => {
     if (code) sessionStorage.setItem("decevia.code", code);
     else sessionStorage.removeItem("decevia.code");
     const url = new URL(window.location.href);
+    url.pathname = "/play";
     if (code) url.searchParams.set("code", code);
-    else if (url.searchParams.get("code")) url.searchParams.delete("code");
-    const next = url.pathname + url.search + url.hash;
-    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== next) {
-      window.history.replaceState({}, "", next);
-    }
+    else url.searchParams.delete("code");
+    navigate(url.pathname + url.search, { replace: true });
   }, [code]);
 
   const room = useQuery(
     api.avalon.getRoom,
     code ? { code, playerId: pid } : "skip",
   );
+
+  /**
+   * Turned out of the room. Two shapes, because mid-game a seat cannot be
+   * deleted without resizing the table: in the lobby our row is gone, and
+   * mid-game it is still there but flagged away. Either way we land back at
+   * the gate with the code filled in — being removed here is not a ban, and
+   * walking straight back in is the point.
+   */
+  const myRow = room?.players.find((p) => p.playerId === pid) ?? null;
+  const benched = myRow?.away === true;
+  const evicted = room != null && room.me == null;
+
+  useEffect(() => {
+    if (!code || !room || (!evicted && !benched)) return;
+    setCodeInput(code);
+    setActiveTab("join");
+    setCode(null);
+    setMsg(
+      benched
+        ? "You were taken off the table. Your seat is held — join again with the same name to take it back."
+        : "The host removed you from that council. Join again whenever you like.",
+    );
+  }, [code, evicted, benched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (room?.opts) setOpts({ ...opts, ...room.opts });
@@ -171,6 +199,9 @@ export default function App() {
   const mDiscardPlot = useMutation(api.avalon.discardPlotCard);
   const mSealQuest = useMutation(api.avalon.sealQuest);
   const mSwapSeat = useMutation(api.avalon.swapSeat);
+  const mCloseRoom = useMutation(api.avalon.closeRoom);
+  const mStartFresh = useMutation(api.avalon.startFreshRoom);
+  const mRemovePlayer = useMutation(api.avalon.removePlayer);
 
   const wrap = (fn: () => Promise<unknown>) => async () => {
     try {
@@ -192,15 +223,28 @@ export default function App() {
     setCode(r.code);
     setMsg("");
   }
-  async function joinRoom() {
+  /**
+   * `rejoin` is the second half of a two-step. The first attempt reports a name
+   * already seated rather than taking it, because taking a seat means taking
+   * its role — the server will only hand it over when asked outright.
+   */
+  async function joinRoom(rejoin = false) {
     if (!name.trim()) return setMsg("Speak your name first.");
     const c = codeInput.trim().toUpperCase();
     if (c.length !== 4) return setMsg("War-council codes are 4 letters.");
-    const r = await mJoin({ code: c, playerId: pid, name });
+    const r = await mJoin({ code: c, playerId: pid, name, rejoin });
+    if (r.status === "nameTaken") {
+      setRejoinName(name.trim());
+      setMsg("");
+      return;
+    }
+    // A reclaimed seat comes back with the id it was left under; adopting it
+    // reunites this tab with its role, its votes and its quest card.
     if (r.playerId && r.playerId !== pid) {
       sessionStorage.setItem(PID_KEY, r.playerId);
       setPid(r.playerId);
     }
+    setRejoinName(null);
     setCode(r.code);
     setMsg("");
   }
@@ -229,6 +273,8 @@ export default function App() {
     leave: leaveRoom,
     swapSeat: (watcherId, seatedId) =>
       mSwapSeat({ code: code!, playerId: pid, watcherId, seatedId }),
+    removePlayer: (targetId) =>
+      mRemovePlayer({ code: code!, playerId: pid, targetId }),
     begin: () => mBegin({ code: code!, playerId: pid }),
     propose: (team, excaliburId) =>
       mPropose({ code: code!, playerId: pid, team, excaliburId }),
@@ -241,6 +287,20 @@ export default function App() {
     strike: (mode, targetId, targetId2) =>
       mAssassinate({ code: code!, playerId: pid, mode, targetId, targetId2 }),
     newGame: () => mNewGame({ code: code!, playerId: pid }),
+    // Same mutation as "another game" at the reckoning: it returns the room to
+    // the lobby with every role, vote and card cleared. From mid-game it is a
+    // restart, which is what a table that mis-set the roles actually needs.
+    restart: () => mNewGame({ code: code!, playerId: pid }),
+    close: async () => {
+      await mCloseRoom({ code: code!, playerId: pid });
+      setCode(null);
+    },
+    // The old room is gone by the time this resolves, so switching `code` to
+    // the new one is what keeps the host from watching their own query go null.
+    startFresh: async () => {
+      const r = await mStartFresh({ code: code!, playerId: pid });
+      setCode(r.code);
+    },
     dealPlot: (toId) => mDealPlot({ code: code!, playerId: pid, toId }),
     playPlot: (card, targetId) =>
       mPlayPlot({ code: code!, playerId: pid, card: card as any, targetId }),
@@ -289,7 +349,7 @@ export default function App() {
             isAdmin: viewer?.isAdmin === true,
             premium: premium,
             email: viewer?.email ?? null,
-            signIn: () => { window.location.hash = "#/signin"; },
+            signIn: () => { navigate("/signin"); },
           }}
           worlds={THEME_LIST.map((t) => ({
             id: t.id,
@@ -310,8 +370,16 @@ export default function App() {
             room.lastVote
               ? {
                   ...room.lastVote,
+                  // Votes are public in Avalon — the table is entitled to know
+                  // who turned the party away, not just how many did.
+                  approverNames: room.lastVote.approvers.map((id) =>
+                    displayName(players.find((p) => p.playerId === id)?.name ?? "someone"),
+                  ),
+                  rejecterNames: room.lastVote.rejecters.map((id) =>
+                    displayName(players.find((p) => p.playerId === id)?.name ?? "someone"),
+                  ),
                   overturnedBy: room.lastVote.overturnedBy
-                    ? (players.find(
+                    ? displayName(players.find(
                         (p) => p.playerId === room.lastVote!.overturnedBy,
                       )?.name ?? "someone")
                     : null,
@@ -323,9 +391,10 @@ export default function App() {
               ? {
                   ...room.lastQuest,
                   revealed: (room.lastQuest.revealed ?? []).map((r) => ({
-                    name:
+                    name: displayName(
                       players.find((p) => p.playerId === r.playerId)?.name ??
-                      "someone",
+                        "someone",
+                    ),
                     card: r.card,
                   })),
                 }
@@ -374,7 +443,7 @@ export default function App() {
               className="vd-field"
               value={name}
               maxLength={16}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setRejoinName(null); }}
               placeholder="unique per warrior"
               autoComplete="nickname"
             />
@@ -403,11 +472,29 @@ export default function App() {
 
             <button
               className="vd-btn vd-btn--primary"
-              onClick={wrap(activeTab === "create" ? createRoom : joinRoom)}
+              onClick={wrap(activeTab === "create" ? createRoom : () => joinRoom())}
             >
               <span>{activeTab === "create" ? "Convene a council" : "Join the council"}</span>
               <Sparkles size={15} />
             </button>
+
+            {rejoinName && (
+              <div className="vd-panel" style={{ marginTop: 14 }}>
+                <p className="vd-voice" style={{ margin: 0 }}>
+                  <strong>{rejoinName}</strong> is already at that table. If that
+                  was you — a closed tab, a dead phone — take the seat back and
+                  your role comes with it.
+                </p>
+                <button
+                  className="vd-btn"
+                  style={{ marginTop: 12 }}
+                  onClick={wrap(() => joinRoom(true))}
+                >
+                  <span>Rejoin as {rejoinName}</span>
+                  <LogIn size={15} />
+                </button>
+              </div>
+            )}
 
             {msg && <p className="vd-errline vd-panel vd-panel--danger">{msg}</p>}
           </div>
@@ -441,18 +528,18 @@ export default function App() {
           </div>
 
           <footer className="vd-gate__foot">
-            <a className="vd-pill" href="#/rules"><ScrollText size={11} /> Rules</a>
+            <a className="vd-pill" href="/rules"><ScrollText size={11} /> Rules</a>
             {signedIn ? (
               premium
                 ? <span className="vd-pill vd-pill--brass"><BadgeCheck size={11} /> Premium</span>
-                : <a className="vd-pill" href="#/upgrade"><Crown size={11} /> Upgrade</a>
+                : <a className="vd-pill" href="/upgrade"><Crown size={11} /> Upgrade</a>
             ) : (
-              <a className="vd-pill" href="#/signin">
+              <a className="vd-pill" href="/signin">
                 <LogIn size={11} /> Sign in
               </a>
             )}
             {viewer?.isAdmin && (
-              <a className="vd-pill" href="#/admin"><Shield size={11} /> Admin</a>
+              <a className="vd-pill" href="/admin"><Shield size={11} /> Admin</a>
             )}
           </footer>
         </div>

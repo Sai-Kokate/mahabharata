@@ -23,6 +23,8 @@ export type TableActions = {
   changeTheme: (themeId: string) => Promise<unknown>;
   leave: () => void;
   swapSeat: (watcherId: string, seatedId: string) => Promise<unknown>;
+  /** Host turns someone out of the room; they may rejoin. */
+  removePlayer: (targetId: string) => Promise<unknown>;
   begin: () => Promise<unknown>;
   propose: (team: string[], excaliburId?: string) => Promise<unknown>;
   vote: (choice: "approve" | "reject") => Promise<unknown>;
@@ -32,6 +34,12 @@ export type TableActions = {
   useLady: (targetId: string) => Promise<unknown>;
   strike: (mode: "merlin" | "lovers", targetId: string, targetId2?: string) => Promise<unknown>;
   newGame: () => Promise<unknown>;
+  /** Same reset as `newGame`, reachable from any phase. */
+  restart: () => Promise<unknown>;
+  /** Host disbands the room for everyone. */
+  close: () => Promise<unknown>;
+  /** Host disbands it and lands in a fresh lobby under a new code. */
+  startFresh: () => Promise<unknown>;
   dealPlot: (toId: string) => Promise<unknown>;
   playPlot: (card: string, targetId?: string) => Promise<unknown>;
   discardPlot: (card: string) => Promise<unknown>;
@@ -46,19 +54,24 @@ export function Table(props: TableProps & { actions: TableActions }) {
   return (
     <TableShell
       room={room}
+      pid={pid}
       theme={theme}
       emblemSrc={emblemSrc}
       account={account}
       error={error}
+      onRestart={actions.restart}
+      onClose={actions.close}
+      onStartFresh={actions.startFresh}
+      onLeave={actions.leave}
     >
       {room.phase === "lobby" && (
         <LobbyScreen
           {...base}
           onStart={actions.start}
           onSwapSeat={actions.swapSeat}
+          onRemovePlayer={actions.removePlayer}
           onSetOpts={actions.setOpts}
           onChangeTheme={actions.changeTheme}
-          onLeave={actions.leave}
         />
       )}
 

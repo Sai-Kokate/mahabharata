@@ -16,7 +16,7 @@ export function ClockFuse({
   endsAt,
   totalMs,
   ticks = 15,
-  caption = "then one minute to lock",
+  caption = "then one minute to name the party",
 }: { endsAt: number; totalMs: number; ticks?: number; caption?: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -137,6 +137,8 @@ export type ChronicleEntry = {
   n: number;
   text: string;
   outcome?: { label: string; detail?: string; held?: boolean };
+  /** Named sides of a vote. The unveil is a moment; this is the record. */
+  sides?: { for: string[]; against: string[] };
 };
 
 export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
@@ -152,6 +154,14 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
             <span className="vd-chron__n">{String(e.n).padStart(2, "0")}</span>
             <div style={{ flex: 1 }}>
               <p className="vd-chron__text">{e.text}</p>
+              {e.sides && (
+                <dl className="vd-chron__sides">
+                  <dt>For</dt>
+                  <dd>{e.sides.for.length ? e.sides.for.join(", ") : "no one"}</dd>
+                  <dt>Against</dt>
+                  <dd>{e.sides.against.length ? e.sides.against.join(", ") : "no one"}</dd>
+                </dl>
+              )}
               {e.outcome && (
                 <div className={`vd-chron__outcome ${e.outcome.held ? "vd-chron__outcome--held" : ""}`}>
                   <span>{e.outcome.label}</span>

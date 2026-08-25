@@ -99,7 +99,7 @@ export default function UpgradePage() {
     return (
       <div className="rules-page">
         <header className="rules-hero">
-          <a className="rules-back" href="#/play">← Back to council</a>
+          <a className="rules-back" href="/play">← Back to council</a>
           <p className="rules-kicker"><Crown size={14} /> Premium</p>
           <h1>Unlock the full war</h1>
           <p className="rules-lede">
@@ -119,13 +119,13 @@ export default function UpgradePage() {
   return (
     <div className="rules-page">
       <header className="rules-hero">
-        <a className="rules-back" href="#/play">← Back to council</a>
+        <a className="rules-back" href="/play">← Back to council</a>
         <p className="rules-kicker"><Crown size={14} /> Premium</p>
         <h1>{viewer.premium ? "Your plan" : "Unlock the full war"}</h1>
         <p className="rules-lede">
           Signed in as <strong>{viewer.email}</strong>
           {viewer.isAdmin && (
-            <> · <a className="billing-link" href="#/admin">admin console</a></>
+            <> · <a className="billing-link" href="/admin">admin console</a></>
           )}
           {" · "}
           <button className="billing-signout" onClick={() => void signOut()}>
@@ -410,7 +410,7 @@ function TierTable({ config }: { config: any }) {
             <li>Percival &amp; Morgana</li>
             <li>Loyal servants &amp; minions</li>
             <li>The Medieval board</li>
-            <li>5–10 players, voice &amp; video</li>
+            <li>Tables of 5 to 18 — the full house rules above ten</li>
           </ul>
         </div>
         <div className="rules-win__card rules-win__card--evil">
@@ -421,7 +421,6 @@ function TierTable({ config }: { config: any }) {
               <li key={k}>{label as string}</li>
             ))}
             <li>Every themed world (Mahabharata, Maratha, Greek, Egyptian)</li>
-            <li>Tables up to 18 players, on the house rules above ten</li>
           </ul>
         </div>
       </div>

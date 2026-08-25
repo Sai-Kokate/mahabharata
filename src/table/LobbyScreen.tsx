@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import {
-  Check, Copy, Crown, Flame, Lock, LogOut, Sparkles, Sun, Swords, Users,
+  Check, Copy, Crown, Flame, Lock, Sparkles, Sun, Swords, Users, X,
 } from "lucide-react";
 import {
   PREMIUM_OPT_KEYS, PREMIUM_OPT_LABELS, TEAM_COUNTS, validateSetup,
@@ -56,13 +56,13 @@ const ROLE_OPTS: Array<{
 
 export function LobbyScreen({
   room, pid, emblemSrc, account, worlds, act,
-  onStart, onSwapSeat, onSetOpts, onChangeTheme, onLeave,
+  onStart, onSwapSeat, onRemovePlayer, onSetOpts, onChangeTheme,
 }: Pick<TableProps, "room" | "pid" | "emblemSrc" | "account" | "worlds" | "act"> & {
   onStart: () => Promise<unknown>;
   onSwapSeat: (watcherId: string, seatedId: string) => Promise<unknown>;
+  onRemovePlayer: (targetId: string) => Promise<unknown>;
   onSetOpts: (opts: Opts) => Promise<unknown>;
   onChangeTheme: (themeId: string) => Promise<unknown>;
-  onLeave: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const isHost = room.hostId === pid;
@@ -270,19 +270,26 @@ export function LobbyScreen({
                 {p.isHost ? "host" : ""}{p.isHost && p.playerId === pid ? " · " : ""}
                 {p.playerId === pid ? "you" : ""}
               </span>
+              {/* Frees the seat and the name together, so a ghost left by a
+                  dead tab can walk back in under the same one. */}
+              {isHost && p.playerId !== pid && (
+                <button
+                  className="vd-tile__x"
+                  title={`Remove ${p.name} — they can rejoin with the same code`}
+                  aria-label={`Remove ${p.name}`}
+                  onClick={act(() => onRemovePlayer(p.playerId))}
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           ))}
         </div>
 
         <p className="vd-voice">
-          Five to {room.premium.seatCap} play. Anyone beyond the seats watches
-          the board and waits for one to empty.
-          {!roomPremium && " Premium tables seat up to eighteen."}
+          Five to {room.premium.seatCap} play, on any plan or none. Anyone
+          beyond the seats watches the board and waits for one to empty.
         </p>
-
-        <button className="vd-textbtn" onClick={onLeave}>
-          <LogOut size={11} /> Leave council
-        </button>
       </div>
 
       {/* ------------------------------ centre ----------------------------- */}
@@ -368,15 +375,25 @@ export function LobbyScreen({
                     {w.name}
                     {w.playerId === pid && <span className="vd-tile__meta">you</span>}
                     {isHost && (
-                      <button
-                        className="vd-watcher__seat"
-                        title="Seat this watcher in place of the last seated player"
-                        onClick={act(() =>
-                          onSwapSeat(w.playerId, room.players[room.players.length - 1].playerId),
-                        )}
-                      >
-                        Seat
-                      </button>
+                      <>
+                        <button
+                          className="vd-watcher__seat"
+                          title="Seat this watcher in place of the last seated player"
+                          onClick={act(() =>
+                            onSwapSeat(w.playerId, room.players[room.players.length - 1].playerId),
+                          )}
+                        >
+                          Seat
+                        </button>
+                        <button
+                          className="vd-tile__x"
+                          title={`Remove ${w.name} — they can rejoin with the same code`}
+                          aria-label={`Remove ${w.name}`}
+                          onClick={act(() => onRemovePlayer(w.playerId))}
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
                     )}
                   </div>
                 ))}
@@ -390,7 +407,7 @@ export function LobbyScreen({
         </div>
 
         {!roomPremium && isHost && (
-          <a className="vd-btn" href="#/upgrade" style={{ textDecoration: "none" }}>
+          <a className="vd-btn" href="/upgrade" style={{ textDecoration: "none" }}>
             <span>Unlock the premium roles &amp; worlds</span>
             <Crown size={15} />
           </a>

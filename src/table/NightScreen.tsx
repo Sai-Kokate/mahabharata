@@ -3,6 +3,10 @@
 
    One studded card, held close to the chest: press and hold to see it, never a
    tap toggle, because the phone is in your hand in a room full of people.
+
+   NOTHING on the card may depend on the role until the hold lands — not the
+   name, not the side, and above all not the colour. A red border on an unheld
+   card told the whole table who the traitors were from across the room.
    Below it the full NIGHT_ORDER script with your own step struck in brass —
    knowing *when* you were shown something is part of the game.
    ========================================================================== */
@@ -107,11 +111,13 @@ export function NightScreen({
               </p>
             </Studded>
           ) : (
-            <Studded className={`vd-role ${evil ? "vd-role--evil" : ""}`}>
+            <Studded className={`vd-role ${held && evil ? "vd-role--evil" : ""}`}>
               <div className="vd-role__side">
-                {evil
-                  ? `Sworn against · ${theme.evilTeamName}`
-                  : `Sworn to · ${theme.goodTeamName}`}
+                {held
+                  ? evil
+                    ? `Sworn against · ${theme.evilTeamName}`
+                    : `Sworn to · ${theme.goodTeamName}`
+                  : "Your allegiance · sealed"}
               </div>
 
               {held ? (

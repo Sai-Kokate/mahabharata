@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, MailCheck } from "lucide-react";
 import { MIN_PASSWORD, RESET_CODE_LENGTH, useAuth, type AuthFlow } from "./auth";
+import { navigate } from "./router";
 
 /**
  * Four screens, one card. The two reset steps are a mode rather than a
@@ -233,17 +234,17 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
 }
 
 /**
- * The `#/signin` surface the header and the gate footer link to. Signing in
+ * The `/signin` surface the header and the gate footer link to. Signing in
  * lands you back at the council rather than leaving you on a dead page.
  */
 export function SignInPage() {
   return (
     <div className="vd-shell">
       <div className="vd-signin-page">
-        <a className="vd-pill" href="#/play">
+        <a className="vd-pill" href="/play">
           <ArrowLeft size={11} /> Back to council
         </a>
-        <SignInCard onDone={() => { window.location.hash = "#/play"; }} />
+        <SignInCard onDone={() => { navigate("/play"); }} />
       </div>
     </div>
   );

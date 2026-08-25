@@ -12,7 +12,9 @@ import { ClockFuse } from "../TableParts";
 import { DISCUSS_MS, SELECT_MS } from "../../convex/logic";
 import { QuestColumn, ChronicleColumn, SeatRing } from "./Parts";
 import { ActionLine } from "./TableShell";
-import { type Room, type TableProps, ROMAN, isLeader, leaderOf, partySize } from "./types";
+import {
+  type Room, type TableProps, ROMAN, displayName, isLeader, leaderOf, partySize,
+} from "./types";
 
 export function ProposeScreen({
   room, pid, emblemSrc, act, onPropose,
@@ -58,8 +60,8 @@ export function ProposeScreen({
             totalMs={DISCUSS_MS + SELECT_MS}
             caption={
               room.discussEndsAt && Date.now() < room.discussEndsAt
-                ? "then one minute to lock"
-                : "the party locks when this runs out"
+                ? "then one minute to name the party"
+                : "the seal passes on when this runs out"
             }
           />
         </div>
@@ -135,7 +137,8 @@ export function ProposeScreen({
               <ActionLine label="Waiting" value={leader?.name.toUpperCase()} />
               <div className="vd-panel">
                 <p className="vd-voice" style={{ margin: 0 }}>
-                  {leader?.name} holds the seal and is naming {needed} to ride.
+                  {leader ? displayName(leader.name) : "The leader"} holds the
+                  seal and is naming {needed} to ride.
                 </p>
               </div>
             </>

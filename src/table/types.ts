@@ -8,10 +8,11 @@
 
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
+import { QUEST_SIZES } from "../../convex/logic";
 
 export type Room = NonNullable<FunctionReturnType<typeof api.avalon.getRoom>>;
 
-/** Someone at the table. Ten at most. */
+/** Someone at the table. Up to `MAX_PLAYERS`. */
 export type TablePlayer = Room["players"][number];
 /** Someone in the room but not in the game. */
 export type Watcher = Room["watchers"][number];
@@ -50,14 +51,26 @@ export type TableProps = {
 
 export const ROMAN = ["I", "II", "III", "IV", "V"];
 
+/**
+ * Names are stored folded to lower case (see `normalizeName` on the server), so
+ * presenting one is the UI's job. Every word gets its initial back, which is
+ * right for "ravi" and for "mary jane" alike.
+ *
+ * Used wherever a name lands inside a sentence. Somewhere it stands alone — a
+ * seat, a roster row, a vote list — `text-transform` in seal.css does the same
+ * job without a round trip through JS.
+ */
+export function displayName(name: string): string {
+  return name.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+}
+
 /** Sigils are dealt from playerId, so they are stable without any schema change. */
 export function nameOf(room: Room, playerId: string | null | undefined): string {
   if (!playerId) return "—";
-  return (
+  const found =
     room.players.find((p) => p.playerId === playerId)?.name ??
-    room.watchers.find((p) => p.playerId === playerId)?.name ??
-    "—"
-  );
+    room.watchers.find((p) => p.playerId === playerId)?.name;
+  return found ? displayName(found) : "—";
 }
 
 /** The player holding the seal this round, or null before the game starts. */
@@ -69,12 +82,11 @@ export function isLeader(room: Room, pid: string): boolean {
   return leaderOf(room)?.playerId === pid;
 }
 
-/** How many riders this quest needs. */
+/**
+ * How many riders this quest needs. Read from the engine's own matrix rather
+ * than a copy: the copy stopped at ten players and answered 0 above it, which
+ * now matters because a premium table seats eighteen.
+ */
 export function partySize(room: Room): number {
-  const n = room.players.length;
-  const sizes: Record<number, number[]> = {
-    5: [2, 3, 2, 3, 3], 6: [2, 3, 4, 3, 4], 7: [2, 3, 3, 4, 4],
-    8: [3, 4, 4, 5, 5], 9: [3, 4, 4, 5, 5], 10: [3, 4, 4, 5, 5],
-  };
-  return sizes[n]?.[room.questIndex] ?? 0;
+  return QUEST_SIZES[room.players.length]?.[room.questIndex] ?? 0;
 }

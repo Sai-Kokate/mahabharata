@@ -63,8 +63,14 @@ export function ChronicleColumn({ room }: { room: Room }) {
       });
     });
     if (room.lastVote) {
+      const nameOfId = (id: string) =>
+        room.players.find((p) => p.playerId === id)?.name ?? "someone";
       out.push({
         n: out.length + 1,
+        sides: {
+          for: room.lastVote.approvers.map(nameOfId),
+          against: room.lastVote.rejecters.map(nameOfId),
+        },
         text: room.lastVote.overturnedBy
           ? "The council said yes, and the King overturned it."
           : room.lastVote.approved
@@ -81,7 +87,7 @@ export function ChronicleColumn({ room }: { room: Room }) {
       out.push({ n: 1, text: "Nothing has happened yet. The first party has still to be named." });
     }
     return out;
-  }, [room.questResults, room.lastVote]);
+  }, [room.questResults, room.lastVote, room.players]);
 
   return <Chronicle entries={entries} />;
 }

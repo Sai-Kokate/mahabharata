@@ -107,13 +107,26 @@ export function questSizesFor(playerCount: number): number[] {
   return QUEST_BASE.map((v) => v + step);
 }
 
+/**
+ * Names are stored folded to lower case, so "Dewank", "dewank" and "DEWANK" are
+ * one warrior rather than three. That matters in two places that used to
+ * disagree: the uniqueness check at the door, and the rejoin path that hands a
+ * seat back by name. Storing the canonical form means the two can never drift.
+ *
+ * Display capitalisation is the UI's job — see `text-transform` on the name
+ * classes in seal.css — so nothing is lost by keeping the data plain.
+ */
+export function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export const MIN_PLAYERS = 5;
 /** Ceiling on players IN A GAME. Beyond it, arrivals become watchers. */
 export const MAX_PLAYERS = 18;
 /**
- * Ceiling on a FREE room's table. Ten is where the official Avalon matrix
- * stops; everything above it runs on the house rules extrapolated in
- * `questSizesFor`/`evilCount`, and those big tables are the paid tier.
+ * Where the printed Avalon matrix stops. Table size is NOT gated on the tier
+ * at the moment — see `seatCap` — so nothing reads this today. It is kept as
+ * the line to re-gate on if that ever changes.
  */
 export const FREE_MAX_PLAYERS = 10;
 
@@ -156,8 +169,12 @@ export function failsNeeded(playerCount: number, questIndex: number): number {
 }
 export const MAX_REJECTS = 5;
 
-/** Leader clock: discuss, then extra time to lock the war party. */
-export const DISCUSS_MS = 3 * 60 * 1000;
+/**
+ * Leader clock: discuss, then extra time to lock the war party. Four minutes
+ * of talk came out of an eight-player game — three had the table still
+ * arguing when the clock ran out.
+ */
+export const DISCUSS_MS = 4 * 60 * 1000;
 export const SELECT_MS = 1 * 60 * 1000;
 
 /**
@@ -280,17 +297,22 @@ export function premiumBlockReason(
 /* ------------------------------ seating -------------------------------- */
 
 /**
- * How many players a room may SEAT, given its premium standing. Free tables
- * run the official matrix (5–10); premium unlocks the house rules above ten,
- * to `MAX_PLAYERS`. This is the ceiling on the game itself — not on how many
- * people may be in the room. See `splitSeating`.
+ * How many players a room may SEAT. Every table takes the full `MAX_PLAYERS`:
+ * eighteen people can sit down together without anyone holding a plan. Table
+ * size is not part of the paid tier — the roles, the expansions and the worlds
+ * are. This is the ceiling on the game itself, not on how many people may be in
+ * the room; see `splitSeating` for what happens past it.
  *
- * Deliberately independent of a subscription's seat count: `seats` says WHO
- * gets premium content, never how big a table is. Wiring the two together
- * made paying SHRINK the table, which is exactly backwards.
+ * The parameter is kept so the tier is threaded to the one place that would
+ * re-gate this (`return premium ? MAX_PLAYERS : FREE_MAX_PLAYERS`) without
+ * having to re-thread it through `seatingOf` and `getRoom` first.
+ *
+ * Never wire this to a subscription's seat count. `seats` says WHO gets premium
+ * content, never how big a table is — joining the two made paying SHRINK the
+ * table, which is exactly backwards.
  */
-export function seatCap(premium: boolean): number {
-  return premium ? MAX_PLAYERS : FREE_MAX_PLAYERS;
+export function seatCap(_premium: boolean): number {
+  return MAX_PLAYERS;
 }
 
 /**

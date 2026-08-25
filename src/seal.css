@@ -411,6 +411,24 @@
 .vd-tally__side--no .vd-label { color: var(--vd-ink-dim); }
 .vd-tally__side--no .vd-tally__n { color: var(--vd-red-ink); }
 
+/* Who voted which way. The count answers "did it pass"; the names answer the
+   question the table actually argues about next. */
+.vd-tally__who {
+  margin: 2px 0 0;
+  padding: 0 var(--vd-3);
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px 9px;
+}
+.vd-tally__who li {
+  font: 500 11.5px/1.3 var(--vd-ui);
+  color: var(--vd-ink-muted);
+}
+.vd-tally__who li.is-none { font-style: italic; color: var(--vd-ink-dim); }
+.vd-tally__side--no .vd-tally__who li { color: var(--vd-red-ink); }
+
 /* The outcome. Brass when it holds, red when it falls. Never a fill. */
 .vd-stamp {
   display: inline-block;
@@ -601,21 +619,47 @@
 
 .lp-lede { margin: 0; font: italic 400 16px/1.6 var(--vd-voice); color: var(--vd-ink-soft); }
 
-/* The holding state. A 1px container like everything else — the only movement
-   is the dot, so it reads as waiting rather than as a button to press. */
-.lp-cta {
+/* The two ways in. Same 1px engraved language as every other control on the
+   board — the weighting is done with fill and rule, never with size alone, so
+   the pair still reads as one object. */
+.lp-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--vd-3);
+  margin-top: var(--vd-8);
+  width: 100%;
+}
+.lp-act {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  margin-top: var(--vd-8);
-  padding: 15px 26px;
-  border: 1px solid var(--vd-brass);
-  font: 500 14px/1 var(--vd-display);
-  letter-spacing: 0.26em;
+  padding: 17px 30px;
+  border: 1px solid var(--vd-rule-control);
+  font: 500 15px/1 var(--vd-display);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  text-decoration: none;
+  color: var(--vd-ink-muted);
+}
+.lp-act:hover { border-color: var(--vd-brass); color: var(--vd-brass); }
+
+/* The one most arrivals want. Brass rule and brass ink; still no fill. */
+.lp-act--primary {
+  border-color: var(--vd-brass);
   color: var(--vd-brass);
 }
-.lp-cta__dot { width: 6px; height: 6px; background: var(--vd-brass); }
+.lp-act--primary:hover {
+  background: var(--vd-brass);
+  color: var(--vd-bg);
+}
+
+/* On a phone they stack full width and become proper thumb targets. */
+@media (max-width: 520px) {
+  .lp-acts { flex-direction: column; align-items: stretch; }
+  .lp-act { padding: 18px 20px; letter-spacing: 0.16em; }
+}
 
 .lp-foot {
   display: flex;
@@ -625,7 +669,6 @@
   margin-top: var(--vd-8);
 }
 .lp-foot .vd-textbtn:hover { color: var(--vd-brass); }
-.lp-enter { color: var(--vd-ink-muted); }
 
 /* ============================================================================
    Layout
@@ -1096,3 +1139,136 @@ body { background: var(--vd-bg); }
 /* The gate's world picker is inside a 460px card, so pin it to two columns. */
 .vd-gate__worlds .vd-worlds { grid-template-columns: 1fr 1fr; }
 @media (max-width: 520px) { .vd-gate__worlds .vd-worlds { grid-template-columns: 1fr; } }
+
+/* ============================================================================
+   The phase banner, the shell bar, and the mobile fixes that came out of the
+   first eight-player game.
+   ========================================================================== */
+
+/* What the table is waiting for. Above the fold on every screen size, because
+   on a phone the centre column is a scroll away. */
+.vd-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-3);
+  margin-top: 15px;
+  padding: 11px var(--vd-4);
+  border: 1px solid var(--vd-rule-container);
+  background: var(--vd-bg-raised);
+}
+.vd-banner__mark {
+  flex: none;
+  width: 5px;
+  height: 15px;
+  background: var(--vd-rule-engraved);
+}
+.vd-banner__text {
+  font: italic 400 15px/1.35 var(--vd-voice);
+  color: var(--vd-ink-muted);
+  min-width: 0;
+}
+.vd-banner.is-urgent { border-color: var(--vd-brass-edge); }
+.vd-banner.is-urgent .vd-banner__mark { background: var(--vd-brass); }
+.vd-banner.is-urgent .vd-banner__text { color: var(--vd-ink); }
+
+/* Restart / close / leave. Quiet by design — they sit under the banner and are
+   never the thing your thumb lands on. */
+.vd-shellbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--vd-4);
+  margin-top: 11px;
+}
+.vd-confirm { display: inline-flex; align-items: center; gap: var(--vd-3); flex-wrap: wrap; }
+.vd-confirm__ask {
+  font: italic 400 13px/1.2 var(--vd-voice);
+  color: var(--vd-ink-muted);
+}
+.vd-textbtn.is-danger { color: var(--vd-red-ink); }
+
+/* --- phones ------------------------------------------------------------- */
+/*
+  The seats are absolutely positioned at 42% of the seal's radius and are
+  themselves ~60px wide, so the outermost ones hang past the ring by half their
+  width. At full width that put them past the viewport edge and the whole page
+  scrolled sideways. Pulling the ring in leaves them somewhere to hang.
+*/
+@media (max-width: 720px) {
+  .vd-centre > .vd-seal,
+  .vd-seal { width: 84%; }
+  .vd-banner { margin-top: var(--vd-3); padding: 9px var(--vd-3); }
+  .vd-banner__text { font-size: 14px; }
+  .vd-table { padding: 15px 0 24px; }
+  .vd-table-layout { gap: var(--vd-5); }
+}
+
+/*
+  Belt and braces: nothing in a game screen may widen the page. `body` already
+  had overflow-x hidden, which iOS Safari happily pans past; `clip` on the
+  element that actually paints the board does not pan.
+*/
+.vd-board { overflow-x: clip; }
+/* Grid and flex children default to min-width:auto, which lets a long name or
+   a wide row push its column wider than the track. */
+.vd-table-layout > *,
+.vd-centre > *,
+.vd-stack > * { min-width: 0; }
+.vd-tile,
+.vd-seat__name,
+.vd-banner__text { overflow-wrap: anywhere; }
+
+/* Who stood where on the last vote. The ledger keeps it after the unveil has
+   come and gone — it is the thing the next round argues about. */
+.vd-chron__sides {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--vd-2);
+  margin: 7px 0 0;
+}
+.vd-chron__sides dt {
+  font: 700 8px/1.4 var(--vd-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+.vd-chron__sides dd {
+  margin: 0;
+  font: 500 11.5px/1.4 var(--vd-ui);
+  color: var(--vd-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+/* A seat the table is waiting on. Red rule, never a fill — it is information,
+   not an alarm. */
+.vd-banner--away { margin-top: var(--vd-2); border-color: var(--vd-red-rule); }
+.vd-banner--away .vd-banner__mark { background: var(--vd-red); }
+
+/* Host's remove control on a roster row. Sits right, quiet until hovered —
+   it is a correction, not an action anyone should reach for by accident. */
+.vd-tile__x {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--vd-ink-dim);
+  cursor: pointer;
+}
+.vd-tile__x:hover { color: var(--vd-red-ink); border-color: var(--vd-red-rule); }
+.vd-tile__meta + .vd-tile__x { margin-left: var(--vd-2); }
+
+/* ============================================================================
+   Names are stored folded to lower case, so the initials are put back here.
+   Only on elements whose whole content IS a name — never on a sentence, where
+   `capitalize` would hit every word. Those go through `displayName()` instead.
+   ========================================================================== */
+.vd-tile,
+.vd-seat__name,
+.vd-watcher,
+.vd-chron__sides dd,
+.vd-tally__who li { text-transform: capitalize; }
+/* Metadata inside a tile keeps its own casing — `.vd-tile__meta` already
+   declares uppercase above, and a child's own rule beats the parent's. */
+.vd-tally__who li.is-none { text-transform: none; }

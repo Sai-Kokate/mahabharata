@@ -135,7 +135,7 @@ export default function RulesPage() {
   return (
     <div className="rules-page">
       <header className="rules-hero">
-        <a className="rules-back" href="#/play">
+        <a className="rules-back" href="/play">
           ← Back to council
         </a>
         <p className="rules-kicker">
@@ -170,10 +170,13 @@ export default function RulesPage() {
             <Users size={18} />
             <h3>Propose</h3>
             <p>
-              The table gets 3 minutes to talk, then 1 extra minute for the
+              The table gets 4 minutes to talk, then 1 extra minute for the
               leader to lock the party. Tap warriors until the count matches
-              this quest’s size, then put it to a vote. If time runs out, the
-              leader plus the next seated warriors are sent to the council.
+              this quest’s size, then put it to a vote. If time runs out the
+              leader forfeits the turn: the seal passes to the next warrior and
+              the same quest is proposed again. A skipped turn is not a
+              rejection — the council never met — so the rejection track is
+              untouched.
             </p>
           </article>
           <article>
@@ -319,8 +322,8 @@ export default function RulesPage() {
           Everything at 5–10 players is unchanged and always takes the printed
           values. Note that the game is still five quests long: at the largest
           sizes many players never ride, which is worth knowing before you seat
-          eighteen. Free tables seat ten; the house rules above ten are part of
-          the premium tier.
+          eighteen. Every table may seat all eighteen — the size of the council
+          is not part of the paid tier.
         </p>
       </section>
 
