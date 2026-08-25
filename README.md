@@ -3,27 +3,43 @@
 A multiplayer online **social deduction** platform for 5–18 players. Convene a
 council, get a 4-letter code, share it, and find out who at your table is
 lying. State syncs **live** through [Convex](https://convex.dev) — no polling,
-no manual refresh — and players talk and see one another over free
-peer-to-peer audio &amp; video.
+no manual refresh.
+
+It is built for a table in one room, phones in hand — you talk to each other,
+not through the app. (An earlier build carried peer-to-peer audio/video; the
+Council Seal redesign removed it.)
 
 ## Routes
 
-Hash routing, so every URL is really `/` — no server rewrites needed to host it.
+Real paths, via a ~90-line router in `src/router.tsx`: `pushState`, a `popstate`
+listener, and one document-level click handler that turns any in-app
+`<a href="/rules">` into a navigation instead of a page load. No router
+dependency, and no screen imports anything to navigate.
 
 | Route | What |
 |---|---|
-| `#/` | The landing page: a holding page with a **Coming soon** CTA |
-| `#/play` | The game — convene / join, the lobby, and every phase after it |
-| `#/rules` | The laws of the round table |
-| `#/signin` | Create an account, sign in, recover a password |
-| `#/upgrade` | Plans and purchase |
-| `#/admin` | The console, for emails in `ADMIN_EMAILS` |
+| `/` | The landing page — **Join the council** and **Sign up** |
+| `/play` | The game — convene / join, the lobby, and every phase after it |
+| `/rules` | The laws of the round table |
+| `/signin` | Create an account, sign in, recover a password |
+| `/upgrade` | Plans and purchase |
+| `/admin` | The console, for emails in `ADMIN_EMAILS` |
 
-An invite link (`…/?code=ABCD`) goes straight to the table even without
-`#/play`, so shared codes keep working while the front door is shut.
+An invite link (`…/?code=ABCD`) resolves to the table **from any path**, and the
+app then canonicalises the URL to `/play?code=ABCD`.
 
-**When you open to everyone:** delete the *Enter the council* link in
-`src/LandingPage.tsx` and point `#/` at the game.
+Two things this needs, both already in place:
+
+- **A rewrite**, so a refresh on `/rules` still serves the app. `vercel.json`
+  sends every non-asset path to `index.html`.
+- **`shouldHandleCode: () => false`** on the auth provider (`src/auth.ts`).
+  Convex Auth spends any `?code=` in the URL as a login credential, deletes the
+  parameter, and skips reading the stored session. Our invite links *are*
+  `?code=ABCD`, so without this every player who joined by link arrived signed
+  out with the room code stripped from their URL.
+
+Links written as `#/play` before the switch are rewritten to paths on boot.
+Unknown paths fall through to the landing page — there is no 404.
 
 ## Worlds
 
@@ -71,38 +87,82 @@ provider and nothing to register with a third party.
 
 ### Tiers
 
-| | Free | Premium (7 seats) |
+| | Free | Premium |
 |---|---|---|
 | Roles | Merlin, Assassin, Percival, Morgana, servants, minions | + Mordred, Oberon, Guinevere, the lovers, both Lancelots |
 | Expansions | — | Lady of the Lake, Excalibur, Plot cards |
 | Worlds | Medieval | + Mahabharata, Maratha, Greek, Egyptian |
-| Players seated | 5–18 | up to the plan's seat count |
+| Players seated | 5–18 | same |
+| House rules | *The loyal may sabotage* | same |
 
 A room's tier follows **the host's** plan. Seats are keyed on email, so a member
-gets premium in any room they host or join once they sign in with that
-address. The plan's seat count caps how many people are *seated* — which is what
-stops one 7-seat plan covering a 10-player table.
+gets premium in any room they host or join once they sign in with that address.
 
-> Note the current inversion: a free room seats the full ten, while a 7-seat plan
-> seats seven. `npx convex env set SUBSCRIPTION_SEATS 10` removes it, after which
-> a plan's seat count only governs who gets premium *content*.
+**Table size is not part of the paid tier.** Every room seats the full
+`MAX_PLAYERS` (18) whether anyone holds a plan or not — what you pay for is the
+roles, the expansions and the worlds. `seatCap()` is the single place that
+decides, and it currently ignores the tier it is handed; re-gating is the
+one-line `return premium ? MAX_PLAYERS : FREE_MAX_PLAYERS` the doc comment
+spells out.
+
+A subscription's seat count (`SUBSCRIPTION_SEATS`, default 7) is a **billing**
+figure and nothing else: how many people the plan covers.
+
+> Two things this used to be, both wrong, in case you meet a stale mention.
+> `seatCap` first read the subscription's seat count — so a premium room seated
+> seven while a free one seated eighteen, and paying *shrank* your table. It was
+> then gated at ten for free tables. Neither applies: everyone gets eighteen.
 
 ## The table, and the room
 
-A **game** seats 5–18 (see *Beyond ten* below). A **room** is unbounded: anyone
-past the seat cap joins as a *watcher* rather than being turned away.
+A **game** seats 5–18 on any plan or none (see *Beyond ten* below). A **room**
+is unbounded: anyone past the seat cap joins as a *watcher* rather than being
+turned away.
 
 - The first N by `seat` are seated; everyone after is a watcher in a stable queue.
 - Watchers see the board and are never dealt a role. Every game
   action refuses them server-side — vote, quest card, party membership, plot cards.
-- Seats are kept dense (`0..n-1`), so when a seated player leaves, compaction
-  promotes the queue head automatically. There is no separate promote step.
+- Seats are kept dense (`0..n-1`), so when a seat is freed **in the lobby**,
+  compaction promotes the queue head automatically — there is no separate
+  promote step. Mid-game no seat is ever freed (see *Coming and going*).
 - The host can pull a specific watcher to the table (`swapSeat`), which is a
   straight exchange of two `seat` values and so preserves density.
 - Hard ceiling is `ROOM_CAPACITY` (40) — joins are otherwise unbounded.
 
 `convex/logic.ts` holds the pure primitives (`splitSeating`, `compactSeats`,
 `swapSeats`, `seatCap`) and both the client and the server import them.
+
+### Coming and going
+
+Everything below exists because a real eight-player game ran into it.
+
+| Action | Who | What happens |
+|---|---|---|
+| **Leave council** | anyone, any phase | Lobby: your row goes. Mid-game: a watcher is removed, a **seated player keeps their seat, flagged away** — deleting it would resize the table under a deck already dealt. |
+| **Rejoin** | anyone | `joinRoom` hands back the *original* `playerId`, reuniting the tab with its role, votes and quest card without rewriting a row. Two-step: the server reports the name as taken and only transfers the seat when asked outright. |
+| **Remove** | host | Frees the seat *and* the name so a ghost from a dead tab can walk back in. The removed player lands at the gate with the code pre-filled. |
+| **Restart** | host, any phase | Same room, same code, everyone keeps their seat; roles, votes and cards cleared. |
+| **New council** | host | Closes this one and opens a fresh lobby under a **new code**, world and options carried over. Only the host comes across. |
+| **Close council** | host | Room and every row hanging off it are purged; everyone returns to the gate. |
+
+A departed seat is announced to the whole table, and — this is the part that
+matters — **every "has everyone answered yet?" test counts only the players who
+are still present**. Counting the full roster is a deadlock: the round waits
+forever on a vote or a quest card that is never coming. Rules *sizing* still
+reads the full seated roster, so losing a player never quietly changes the team
+split or the quest sizes mid-game. A party may not be named from absent
+players, and if the host is the one who walks out the seal passes on, or the
+room would lose every way out of itself.
+
+Rooms are reclaimed three ways: the last person out closes the room behind
+them, the host can close it outright, and a cron (`convex/crons.ts`) sweeps
+rooms older than 12 hours every 6 — the only thing that catches eight people
+closing their tabs at once.
+
+**Names are stored folded to lower case** (`normalizeName`), so the uniqueness
+check at the door and the rejoin lookup can never drift apart. Display
+capitalisation is the UI's job — `displayName()` for names inside a sentence,
+`text-transform` for elements whose whole content is a name.
 
 > The free/paid split lives in one place — `PREMIUM_OPT_KEYS` and
 > `FREE_THEME_IDS` in `convex/logic.ts`. Note this currently puts the
@@ -111,24 +171,25 @@ past the seat cap joins as a *watcher* rather than being turned away.
 
 ### Purchase flow
 
-`#/upgrade` → pick monthly or yearly → scan the UPI QR → paste the transaction
-reference → an admin approves it at `#/admin`, which mints the subscription and
+`/upgrade` → pick monthly or yearly → scan the UPI QR → paste the transaction
+reference → an admin approves it at `/admin`, which mints the subscription and
 its seats. Nothing talks to a payment gateway; approval is the only thing that
 grants access, and the price is always read server-side, never from the client.
 
-The buyer can rename the covered emails at any time from `#/upgrade`.
+The buyer can rename the covered emails at any time from `/upgrade`.
 
-### Admin console — `#/admin`
+### Admin console — `/admin`
 
 Payment requests (approve with a custom duration, or reject with a note), all
 subscriptions (edit seats, +30 days, revoke, reactivate, delete), the user list
 with tier, and a direct grant form for comps or payments taken offline.
 
-## Beyond ten — a house rule
+## Beyond ten — the extrapolated matrix
 
 Avalon is printed for 5–10 players and defines no team split or mission sizes
-above that. This engine goes to **20**, and rather than invent numbers both are
-extrapolated from the printed table's own arithmetic:
+above that. This engine goes to **18**, and rather than invent numbers both are
+extrapolated from the printed table's own arithmetic. **Every table can use the
+full range — the extrapolation is not gated on the tier.**
 
 | | Rule | Why |
 |---|---|---|
@@ -147,6 +208,30 @@ the way to eighteen.
 > Worth knowing before you seat eighteen: the game is still **five quests** long,
 > so at the largest sizes many players never ride. Extending the quest count is
 > the obvious follow-up if that turns out to matter.
+
+## House rules
+
+Rule variants, distinct from the paid content: they cost no seats and are free.
+
+- **The loyal may sabotage** (`goodMayFail`, off by default) — hands Good the
+  Fail card too, so a Fail proves nothing about who played it and Merlin gains
+  somewhere to hide. Printed Avalon forbids it. It follows *current* allegiance,
+  so a Lancelot presently good is freed by it while the Evil one stays forced.
+  The server clamp is authoritative; the client's `allowedCards` is only a hint.
+
+## The clock
+
+| Phase | Window | On timeout |
+|---|---|---|
+| Propose | 4 min to talk + 1 min to name | **The seal passes on.** The leader forfeits the turn, the next warrior takes it, and the *same* quest is proposed again. Deliberately **not** a rejection — the council never met — so the rejection track is untouched. |
+| Plot deal | 90s | Undealt cards stay in the deck |
+| King Returns | 25s | Everyone is taken to have stood down |
+| Excalibur | 45s | The card is not flipped |
+| Lady of the Lake | 60s | Nobody is inspected |
+| **Quest, Assassin** | **none** | — |
+
+Quest and Assassin have no clock, which is why a player walking out of either
+used to hang the game permanently. The escape hatch is the host's **Restart**.
 
 ## The Council Seal (game UI)
 
@@ -236,8 +321,16 @@ That is the whole Vercel list. `convex deploy --cmd` deploys the backend and
 injects `VITE_CONVEX_URL` into the build itself, so you never set it by hand —
 and `VITE_CONVEX_SITE_URL`, which lingers in `.env`, is read by nothing.
 
-No rewrite rules are needed: routing is hash-based, so every URL is really `/`
-and a plain static deploy serves the whole app.
+**A rewrite is required.** Routing is path-based, so `/rules` must serve
+`index.html` or a refresh 404s. `vercel.json` carries it:
+
+```json
+"rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+```
+
+Vercel checks the filesystem before rewrites, so `/assets/*` and anything in
+`public/` are still served directly. On another host, configure the equivalent
+SPA fallback.
 
 Everything else lives on the Convex **production** deployment, which starts
 empty — see the table below and set each with `npx convex env set NAME value
@@ -278,7 +371,11 @@ The client also reads `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` from
 
 ### Recurring jobs
 
-- **Admin.** Approve or reject purchases in `#/admin`; that is what mints a
+- **The one cron.** `convex/crons.ts` runs `sweepAbandonedRooms` every 6 hours,
+  purging rooms older than `ROOM_TTL_MS` (12h) with every row hanging off them.
+  Nothing else depends on it — if it never ran, the only cost would be dead
+  rows. It exists because a closed browser tab tells the server nothing.
+- **Admin.** Approve or reject purchases in `/admin`; that is what mints a
   subscription. Nothing sweeps expired plans — entitlement is recomputed from
   `expiresAt` on every read, so a lapsed plan simply stops unlocking content.
 - **Secrets.** `RESEND_API_KEY` is the only third-party secret in the project.
@@ -292,24 +389,72 @@ The client also reads `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` from
 ## Project layout
 
 ```
-convex/
-  auth.ts       Convex Auth — email + password, reset, welcome mail
-  auth.config.ts / http.ts   JWT issuer and the /api/auth/* routes
-  entitlements.ts  who is premium, who is an admin, pricing (reads ctx.auth only)
-  billing.ts    subscriptions, seats, orders, admin operations
-  schema.ts     tables: rooms, players, votes, questCards, signals,
-                plotHands, plotLog, plotMarks, secrets,
-                subscriptions, seats, orders, + Convex Auth tables
-  logic.ts      pure rules: team sizes, role dealing, secrecy knowledge,
-                card restrictions, loyalty & plot decks, setup validation
-  avalon.ts     queries + mutations (state machine, read model, A/V signaling)
-  themes.ts     five worlds: role names, lore, colours, expansion naming
+convex/                       the backend — every rule and every secret
+  schema.ts                   tables + indexes (see below)
+  logic.ts                    PURE rules, imported by client and server alike:
+                              team sizes, quest matrix, role dealing, secrecy,
+                              card restrictions, seating, loyalty & plot decks,
+                              setup validation, name normalisation
+  avalon.ts                   the game itself — queries, mutations, the phase
+                              machine, and `getRoom`, the one read model the
+                              whole client subscribes to
+  themes.ts                   five worlds: role names, lore, expansion naming
+  crons.ts                    one job: sweep abandoned rooms
+  entitlements.ts             who is premium, who is admin, pricing
+  billing.ts                  subscriptions, seats, orders, admin operations
+  auth.ts                     Convex Auth — email + password
+  passwordReset.ts            the 6-digit reset code provider
+  email.ts                    Resend over plain fetch + both templates
+  auth.config.ts, http.ts     JWT issuer and the /api/auth/* routes
+
 src/
-  main.tsx      ConvexAuthProvider + hash routing (#/rules, #/upgrade, #/admin)
-  UpgradePage.tsx  plans, UPI QR, seat form, request history
-  AdminPage.tsx    approvals, subscriptions, users, manual grants
-  App.tsx       Mahabharata-themed UI + video grid, driven by Convex hooks
+  main.tsx                    providers + the route table
+  router.tsx                  pushState, popstate, one click handler
+  auth.ts                     the ONLY file naming the auth vendor
+  App.tsx                     the gate (convene/join/rejoin), room state, and
+                              every mutation the table can call
+  LandingPage.tsx             the front door
+  SignIn.tsx                  sign in / sign up / password reset
+  RulesPage.tsx               the laws, incl. the house rules
+  UpgradePage.tsx             plans, UPI QR, seat editor, request history
+  AdminPage.tsx               approvals, subscriptions, users, manual grants
+  CouncilSeal.tsx             the engraved seat ring, 5–18 seats
+  RevealCeremony.tsx          the vote and quest unveils (GSAP)
+  TableParts.tsx              clock fuse, quest ladder, rejection track, ledger
+  sigils.tsx                  heraldic marks dealt from playerId
+  seal.css                    the Council Seal design system
+  styles.css                  base + the non-game pages
+  table/                      one screen per phase
+    index.tsx                 phase router + the actions the screens can call
+    types.ts                  Room type DERIVED from getRoom, so screens
+                              cannot drift from the server
+    TableShell.tsx            board, topbar, phase banner, host controls
+    Parts.tsx                 quest column, chronicle, room -> seat-ring mapping
+    LobbyScreen.tsx           seats, watcher queue, setup, host removals
+    NightScreen.tsx           role card (press-and-hold) + the night script
+    ProposeScreen.tsx         clock fuse, seal, NAMED line, Excalibur
+    VoteScreen.tsx            hidden votes + the verdict / King Returns plates
+    QuestScreen.tsx           card choice, Excalibur window, anonymous result
+    LadyScreen.tsx            eligible targets, past holders disabled
+    AssassinScreen.tsx        candidates + the lovers mode switch
+    ReckoningScreen.tsx       winReason, quest board, allegiances
+    PlotHand.tsx              the deal, your hand, your intel, the public log
+
+design/                       the annotated design spec (open the .dc.html)
+vercel.json                   build command, asset caching, the SPA rewrite
 ```
+
+**Tables** (`convex/schema.ts`): `rooms`, `players`, `votes`, `questCards`,
+`plotHands`, `plotLog`, `plotMarks`, `secrets` for the game; `subscriptions`,
+`seats`, `orders` for billing; plus the Convex Auth tables.
+
+Two load-bearing conventions:
+
+- **`convex/logic.ts` is pure and shared.** No `ctx`, no I/O. The client imports
+  the same quest matrix the server rules on, so the lobby can validate a setup
+  without a round trip and can never disagree with the server about it.
+- **`src/table/types.ts` derives `Room` from `getRoom`'s return type.** Change
+  the query and every screen that reads the removed field fails to compile.
 
 ## Run it
 
@@ -341,8 +486,12 @@ Host `dist/` on any static host (Vercel, Netlify, Cloudflare Pages, etc.) with
 
 ## Notes
 
-- Your player identity is stored in `localStorage`, so a refresh keeps your seat.
-  If that's cleared, rejoin with the **same name** to reclaim your seat.
+- Your player identity lives in **`sessionStorage`**, which is why every tab is
+  its own warrior — a refresh keeps your seat, a new tab is a new player. Lose
+  it (a closed tab, a dead phone) and rejoining with the **same name** reclaims
+  the seat, its role and its cards. Note the trade-off: a name is the only
+  handle we have, so anyone in the room who knows one can claim that seat. It is
+  a deliberate two-step rather than automatic, but it is not proof of identity.
 - Merlin & the Assassin are always in play. The host can toggle Percival,
   Morgana, Mordred, Oberon, Guinevere, the lovers (Tristan + Isolde) and the two
   Lancelots. The lobby shows seats used per side and refuses to start an illegal
@@ -351,6 +500,14 @@ Host `dist/` on any static host (Vercel, Netlify, Cloudflare Pages, etc.) with
   5 rejected proposals in a row = evil, and the Assassin's hunt for Merlin if
   Good completes three quests. With the lovers in play the Assassin may instead
   name *both* of them.
+- Nothing about a role is visible before the hold lands — not the name, not the
+  side, and above all not the colour. A red border on an unheld card told the
+  whole table who the traitors were from across the room.
+- The vote and quest unveils do not colour themselves until the reveal has
+  actually happened: the plate used to turn red the instant it opened, giving
+  the result away while the cards were still face down.
+- Votes are public, as printed. The unveil names who supported and who opposed,
+  and the chronicle keeps the record after the ceremony has gone.
 
 ## Expansions
 
