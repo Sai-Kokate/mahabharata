@@ -18,8 +18,9 @@ dependency, and no screen imports anything to navigate.
 
 | Route | What |
 |---|---|
-| `/` | The landing page — **Join the council** and **Sign up** |
+| `/` | The landing page — **Join the council** and **Sign up**, or your account and its plan once signed in |
 | `/play` | The game — convene / join, the lobby, and every phase after it |
+| `/learn` | An animated walkthrough. Standalone: no room, no query, no auth |
 | `/rules` | The laws of the round table |
 | `/signin` | Create an account, sign in, recover a password |
 | `/upgrade` | Plans and purchase |
@@ -140,7 +141,7 @@ Everything below exists because a real eight-player game ran into it.
 |---|---|---|
 | **Leave council** | anyone, any phase | Lobby: your row goes. Mid-game: a watcher is removed, a **seated player keeps their seat, flagged away** — deleting it would resize the table under a deck already dealt. |
 | **Rejoin** | anyone | `joinRoom` hands back the *original* `playerId`, reuniting the tab with its role, votes and quest card without rewriting a row. Two-step: the server reports the name as taken and only transfers the seat when asked outright. |
-| **Remove** | host | Frees the seat *and* the name so a ghost from a dead tab can walk back in. The removed player lands at the gate with the code pre-filled. |
+| **Remove** | host | Frees the seat *and* the name so a ghost from a dead tab can walk back in. In the lobby the row goes; mid-game the seat is held and flagged, same as walking out. The removed player lands at the gate with the code pre-filled, by either route. |
 | **Restart** | host, any phase | Same room, same code, everyone keeps their seat; roles, votes and cards cleared. |
 | **New council** | host | Closes this one and opens a fresh lobby under a **new code**, world and options carried over. Only the host comes across. |
 | **Close council** | host | Room and every row hanging off it are purged; everyone returns to the gate. |
@@ -233,6 +234,13 @@ Rule variants, distinct from the paid content: they cost no seats and are free.
 Quest and Assassin have no clock, which is why a player walking out of either
 used to hang the game permanently. The escape hatch is the host's **Restart**.
 
+Two notices, because a clock nobody is told about is a clock nobody obeys. When
+the talking time ends, every player gets an alert saying the naming minute has
+started — client-side, off `discussEndsAt`, fired on the crossing so a tab that
+opens late does not announce a moment it missed. And when a leader is skipped,
+`lastSkip` on the room names them, so the table sees why the seal moved instead
+of watching the leader change for no visible reason.
+
 ## The Council Seal (game UI)
 
 The gameplay surface is the **Council Seal** system: flat blackened surfaces with
@@ -308,10 +316,75 @@ dependency. Both templates live in that file.
 > send to real users: verify a domain at <https://resend.com/domains>, then set
 > `EMAIL_FROM` to an address on it.
 
+## How to play — `/learn`
+
+A standalone animated walkthrough at `/learn`, and standalone means it: no
+room, no query, no mutation, no auth. It cannot break a game and a broken game
+cannot take it down. It does read the same DATA the engine rules on —
+`PLOT_CARDS`, `NIGHT_ORDER`, `TEAM_COUNTS`, the theme's role list — so it can
+never promise a rule the server disagrees with.
+
+The centre of it is one stage that plays six scenarios: a round start to
+finish, five parties turned away, the Lady, Excalibur, the Lancelots, and the
+Assassin's strike. It uses the real `CouncilSeal`, so what you learn there is
+what you look at during a game.
+
+`src/learn/scenarios.ts` is pure data — a cast and a list of beats, each saying
+what every seat looks like and what to say about it. `Stage.tsx` renders a beat
+and knows nothing else, so **a new scenario is an entry in that file and no new
+code**. The beats are hand-authored narration, though: if a rule changes
+materially, the sentence describing it needs editing by hand.
+
+Lazy-loaded, so players sitting at a table never download it.
+
+## Being found (SEO)
+
+Googlebot runs JavaScript, so the app was always indexable. Two things were
+nevertheless broken, and both are fixed:
+
+- **Every route served byte-identical HTML** — one title, one description and
+  one canonical for six URLs, which is the textbook duplicate-content signal.
+- **Everything that is not Google runs no JS at all** — Bing's older paths and
+  every social scraper building a link preview saw an empty `<div id="root">`.
+
+`scripts/prerender.mjs` runs after `vite build` and writes a real document per
+public route (`/`, `/learn`, `/rules`): its own title, description, canonical
+and Open Graph tags, plus body copy a crawler reads without executing anything.
+No dependencies — string templating over the built `index.html`, so the build
+cannot fail on a bundling step. Vercel checks the filesystem before rewrites,
+so those files win for their paths and the SPA rewrite catches everything else.
+
+React mounts over it for humans: `createRoot()` replaces the container's
+children rather than hydrating them, so the static copy never has to match what
+React renders and there is no hydration mismatch to manage.
+
+> The prerendered copy is hand-authored, for the same reason as the walkthrough:
+> the pages depend on Convex hooks and CSS imports that do not survive a bare
+> node render. Keep it to the durable claims a page makes.
+
+Also in place: per-route `document.title` and description for the in-app
+navigations, the icon set (`favicon.svg`, a PNG fallback, `apple-touch-icon`,
+192/512 for the manifest), a 1200×630 `og.png`, `site.webmanifest`,
+`robots.txt` (which disallows `/play`, `/admin` and `/upgrade` — a council code
+is not a page) and `sitemap.xml`.
+
+**The domain lives in four places** — `index.html`'s head, `robots.txt`,
+`sitemap.xml`, and `ORIGIN` in the prerender script (overridable with
+`SITE_ORIGIN`). It is currently `https://www.decevia.space`. A canonical must
+match what actually serves, so redirect the apex to `www` rather than serving
+both, or Google sees two copies of every page.
+
+None of this makes the site rank. It removes the mechanical reasons a crawler
+would index it badly. Submitting the sitemap in Google Search Console is what
+actually starts discovery.
+
 ## Deploying (Vercel + Convex)
 
 `vercel.json` pins the build, so the only thing to set in the Vercel dashboard
 is one environment variable:
+
+The build is `tsc -b && vite build && node scripts/prerender.mjs`, so a deploy
+always ships the prerendered pages.
 
 | Vercel env var | Where it comes from |
 |---|---|
@@ -373,8 +446,14 @@ The client also reads `VITE_CONVEX_URL` and `VITE_CONVEX_SITE_URL` from
 
 - **The one cron.** `convex/crons.ts` runs `sweepAbandonedRooms` every 6 hours,
   purging rooms older than `ROOM_TTL_MS` (12h) with every row hanging off them.
-  Nothing else depends on it — if it never ran, the only cost would be dead
-  rows. It exists because a closed browser tab tells the server nothing.
+  It exists because a closed browser tab tells the server nothing.
+
+  Bounded to 100 rooms a run, and it reads the oldest off the front rather than
+  scanning the table. A mutation is one transaction with hard ceilings (4,096
+  index reads, 16,000 writes) and purging a room costs seven index reads plus
+  its rows — unbounded, a large enough backlog would exceed them, and because
+  the transaction is atomic the whole sweep would roll back and never recover.
+  A full batch reschedules itself a minute later instead of waiting 6 hours.
 - **Admin.** Approve or reject purchases in `/admin`; that is what mints a
   subscription. Nothing sweeps expired plans — entitlement is recomputed from
   `expiresAt` on every read, so a lapsed plan simply stops unlocking content.
@@ -408,7 +487,7 @@ convex/                       the backend — every rule and every secret
   auth.config.ts, http.ts     JWT issuer and the /api/auth/* routes
 
 src/
-  main.tsx                    providers + the route table
+  main.tsx                    providers, the route table, per-route <title>
   router.tsx                  pushState, popstate, one click handler
   auth.ts                     the ONLY file naming the auth vendor
   App.tsx                     the gate (convene/join/rejoin), room state, and
@@ -422,13 +501,18 @@ src/
   RevealCeremony.tsx          the vote and quest unveils (GSAP)
   TableParts.tsx              clock fuse, quest ladder, rejection track, ledger
   sigils.tsx                  heraldic marks dealt from playerId
+  LearnPage.tsx               the animated walkthrough (lazy-loaded)
+  learn/scenarios.ts          the walkthrough's scripts, as pure data
+  learn/Stage.tsx             renders one beat; knows no rules
+  learn.css                   scoped to .lx, reaches no gameplay screen
   seal.css                    the Council Seal design system
   styles.css                  base + the non-game pages
   table/                      one screen per phase
     index.tsx                 phase router + the actions the screens can call
     types.ts                  Room type DERIVED from getRoom, so screens
                               cannot drift from the server
-    TableShell.tsx            board, topbar, phase banner, host controls
+    TableShell.tsx            board, topbar, phase banner, clock alert, controls
+    RoleReveal.tsx            hold-to-reveal your own lot, on any screen
     Parts.tsx                 quest column, chronicle, room -> seat-ring mapping
     LobbyScreen.tsx           seats, watcher queue, setup, host removals
     NightScreen.tsx           role card (press-and-hold) + the night script
@@ -440,6 +524,8 @@ src/
     ReckoningScreen.tsx       winReason, quest board, allegiances
     PlotHand.tsx              the deal, your hand, your intel, the public log
 
+scripts/prerender.mjs         writes crawlable HTML per public route
+public/                       icons, og.png, manifest, robots.txt, sitemap.xml
 design/                       the annotated design spec (open the .dc.html)
 vercel.json                   build command, asset caching, the SPA rewrite
 ```
@@ -502,7 +588,12 @@ Host `dist/` on any static host (Vercel, Netlify, Cloudflare Pages, etc.) with
   name *both* of them.
 - Nothing about a role is visible before the hold lands — not the name, not the
   side, and above all not the colour. A red border on an unheld card told the
-  whole table who the traitors were from across the room.
+  whole table who the traitors were from across the room. The same applies to
+  the night script: each step belongs to exactly one role, so marking *your*
+  step named your role outright, and that marker waits for the hold too.
+- **Hold to see your lot** is in the shell bar on every in-game screen. The
+  night card used to be the only place a role existed, so from the first
+  proposal onward there was no way to check what you were dealt.
 - The vote and quest unveils do not colour themselves until the reveal has
   actually happened: the plate used to turn red the instant it opened, giving
   the result away while the cards were still face down.
