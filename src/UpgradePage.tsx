@@ -415,12 +415,13 @@ function TierTable({ config }: { config: any }) {
         </div>
         <div className="rules-win__card rules-win__card--evil">
           <Crown size={22} />
-          <h3>Premium · {config?.seats ?? 7} seats</h3>
+          <h3>Premium · covers {config?.seats ?? 7} people</h3>
           <ul>
             {Object.entries(config?.premiumOptLabels ?? {}).map(([k, label]) => (
               <li key={k}>{label as string}</li>
             ))}
             <li>Every themed world (Mahabharata, Maratha, Greek, Egyptian)</li>
+            <li>Tables up to 18 players, on the house rules above ten</li>
           </ul>
         </div>
       </div>

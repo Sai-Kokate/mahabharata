@@ -60,7 +60,7 @@ function requireRoom<T>(r: T | null): T {
 async function seatingOf(ctx: MutationCtx | QueryCtx, room: Doc<"rooms">) {
   const all = await playersOf(ctx, room._id);
   const ent = await roomEntitlement(ctx, room);
-  const split = splitSeating(all, seatCap(ent.premium, ent.seats));
+  const split = splitSeating(all, seatCap(ent.premium));
   return { all, ...split };
 }
 
@@ -521,6 +521,7 @@ const optsValidator = v.object({
   lady: v.optional(v.boolean()),
   excalibur: v.optional(v.boolean()),
   plots: v.optional(v.boolean()),
+  goodMayFail: v.optional(v.boolean()),
 });
 
 export const createRoom = mutation({
@@ -977,12 +978,14 @@ export const playQuestCard = mutation({
     const seated = await seatedOf(ctx, room);
     const me = seated.find((p) => p.playerId === playerId);
     if (!me) throw new Error("Watchers do not ride.");
-    // Server enforces the secrecy rules: the loyal may only succeed, and the
-    // Lancelots are locked to their current allegiance's card.
+    // Server enforces the secrecy rules: the loyal may only succeed — unless
+    // the room turned on `goodMayFail` — and the Lancelots are locked to their
+    // current allegiance's card. Never trust the client's own `allowedCards`.
     const finalCard = clampQuestCard(
       me.role as Role | undefined,
       room.lancelotSwapped ?? false,
       card,
+      normalizeOpts(room.opts).goodMayFail,
     );
 
     const existing = (
@@ -1434,7 +1437,7 @@ export const getRoom = query({
     // `players` is everyone in the room; `seated` is everyone in the GAME.
     // Every rules-derived number below is sized to the table, not the room.
     const roomEnt0 = await roomEntitlement(ctx, room);
-    const cap = seatCap(roomEnt0.premium, roomEnt0.seats);
+    const cap = seatCap(roomEnt0.premium);
     const players = await playersOf(ctx, room._id);
     const { seated, watching, overflowing } = splitSeating(players, cap);
     const seatedIds = new Set(seated.map((p) => p.playerId));
@@ -1671,7 +1674,7 @@ export const getRoom = query({
             team: me.role ? currentTeam(me.role as Role, swapped) : null,
             startingTeam: me.role ? ROLE_TEAM[me.role as Role] : null,
             allowedCards: me.role
-              ? allowedQuestCards(me.role as Role, swapped)
+              ? allowedQuestCards(me.role as Role, swapped, opts.goodMayFail)
               : (["success"] as QuestCard[]),
             nightStep: me.role ? nightStep(me.role as Role) : 0,
             isWatcher: iAmWatching,

@@ -2,8 +2,9 @@
    05 · On the quest, and what came back.
 
    Only riders see the choice, and the engine clamps it (`allowedQuestCards`):
-   good may only succeed, the Evil Lancelot may only fail. The result is
-   anonymous by design — the count of fails, never the hands.
+   good may only succeed — unless the room turned on the `goodMayFail` house
+   rule — and the Evil Lancelot may only fail. The result is anonymous by
+   design — the count of fails, never the hands.
    ========================================================================== */
 
 import { Check, Eye, Sword, X } from "lucide-react";
@@ -94,13 +95,17 @@ export function QuestScreen({
                   <span className="vd-card__note">sabotage it</span>
                 </button>
               </div>
-              {forced && (
+              {forced ? (
                 <p className="vd-voice" style={{ marginTop: 11 }}>
                   {canFail
                     ? "Your oath binds you — you can only sabotage this quest."
                     : "Those sworn to the light may only succeed."}
                 </p>
-              )}
+              ) : room.opts.goodMayFail ? (
+                <p className="vd-voice" style={{ marginTop: 11 }}>
+                  House rule: the loyal may sabotage too. A Fail names no traitor.
+                </p>
+              ) : null}
             </>
           )}
         </div>

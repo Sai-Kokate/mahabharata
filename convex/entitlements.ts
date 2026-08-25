@@ -67,7 +67,10 @@ export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
 
 export type Entitlement = {
   premium: boolean;
-  /** Max players allowed in a premium room. 0 when not premium. */
+  /**
+   * How many PEOPLE the plan covers — a billing figure, not a table size.
+   * The table's ceiling comes from `seatCap()` alone. 0 when not premium.
+   */
   seats: number;
   subscriptionId: Id<"subscriptions"> | null;
   expiresAt: number | null;

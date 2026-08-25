@@ -110,6 +110,12 @@ export function questSizesFor(playerCount: number): number[] {
 export const MIN_PLAYERS = 5;
 /** Ceiling on players IN A GAME. Beyond it, arrivals become watchers. */
 export const MAX_PLAYERS = 18;
+/**
+ * Ceiling on a FREE room's table. Ten is where the official Avalon matrix
+ * stops; everything above it runs on the house rules extrapolated in
+ * `questSizesFor`/`evilCount`, and those big tables are the paid tier.
+ */
+export const FREE_MAX_PLAYERS = 10;
 
 function buildMatrix() {
   const teams: Record<number, [number, number]> = {};
@@ -178,12 +184,20 @@ export type Opts = {
   lady: boolean; // Lady of the Lake (7+ players)
   excalibur: boolean;
   plots: boolean; // Plot cards
+  // house rules
+  /**
+   * Let the loyal sabotage. Printed Avalon forbids it — Good MUST play Success
+   * — so this is off by default. On, a Fail proves nothing about who played it,
+   * which is the whole point: Merlin can hide, and a good player can bluff.
+   */
+  goodMayFail: boolean;
 };
 
 export const DEFAULT_OPTS: Opts = {
   percival: false, morgana: false, mordred: false, oberon: false,
   guinevere: false, lovers: false, lancelot: false,
   lady: false, excalibur: false, plots: false,
+  goodMayFail: false,
 };
 
 /**
@@ -210,7 +224,7 @@ export const PREMIUM_OPT_KEYS: (keyof Opts)[] = [
   "lady", "excalibur", "plots",
 ];
 
-export const FREE_OPT_KEYS: (keyof Opts)[] = ["percival", "morgana"];
+export const FREE_OPT_KEYS: (keyof Opts)[] = ["percival", "morgana", "goodMayFail"];
 
 /** Boards included in the free tier. */
 export const FREE_THEME_IDS = ["medieval"];
@@ -266,13 +280,17 @@ export function premiumBlockReason(
 /* ------------------------------ seating -------------------------------- */
 
 /**
- * How many players a room may SEAT, given its premium standing. Avalon has no
- * team split or mission matrix above ten, so this is the ceiling on the game
- * itself — not on how many people may be in the room. See `splitSeating`.
+ * How many players a room may SEAT, given its premium standing. Free tables
+ * run the official matrix (5–10); premium unlocks the house rules above ten,
+ * to `MAX_PLAYERS`. This is the ceiling on the game itself — not on how many
+ * people may be in the room. See `splitSeating`.
+ *
+ * Deliberately independent of a subscription's seat count: `seats` says WHO
+ * gets premium content, never how big a table is. Wiring the two together
+ * made paying SHRINK the table, which is exactly backwards.
  */
-export function seatCap(premium: boolean, seats: number): number {
-  if (!premium) return MAX_PLAYERS;
-  return Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, seats));
+export function seatCap(premium: boolean): number {
+  return premium ? MAX_PLAYERS : FREE_MAX_PLAYERS;
 }
 
 /**
@@ -459,12 +477,23 @@ export type QuestCard = "success" | "fail";
  *
  * Per the wiki the Lancelots are *forced*: Evil Lancelot may only fail, Good
  * Lancelot may only succeed — and that follows the loyalty swap.
+ *
+ * `goodMayFail` is the house rule that hands Good the Fail card too. It applies
+ * to whichever side a player is on RIGHT NOW, so a Lancelot currently good is
+ * freed by it exactly as any other loyal player is.
  */
-export function allowedQuestCards(role: Role, lancelotSwapped: boolean): QuestCard[] {
+export function allowedQuestCards(
+  role: Role,
+  lancelotSwapped: boolean,
+  goodMayFail = false,
+): QuestCard[] {
+  const both: QuestCard[] = ["success", "fail"];
   if (role === "lancelot_good" || role === "lancelot_evil") {
-    return currentTeam(role, lancelotSwapped) === "evil" ? ["fail"] : ["success"];
+    if (currentTeam(role, lancelotSwapped) === "evil") return ["fail"];
+    return goodMayFail ? both : ["success"];
   }
-  return ROLE_TEAM[role] === "evil" ? ["success", "fail"] : ["success"];
+  if (ROLE_TEAM[role] === "evil") return both;
+  return goodMayFail ? both : ["success"];
 }
 
 /** Clamp a requested card to something this role may legally play. */
@@ -472,9 +501,10 @@ export function clampQuestCard(
   role: Role | undefined,
   lancelotSwapped: boolean,
   requested: QuestCard,
+  goodMayFail = false,
 ): QuestCard {
   if (!role) return "success";
-  const allowed = allowedQuestCards(role, lancelotSwapped);
+  const allowed = allowedQuestCards(role, lancelotSwapped, goodMayFail);
   return allowed.includes(requested) ? requested : allowed[0];
 }
 

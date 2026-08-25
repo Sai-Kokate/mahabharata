@@ -47,6 +47,7 @@ const opts = v.object({
   lady: v.optional(v.boolean()),
   excalibur: v.optional(v.boolean()),
   plots: v.optional(v.boolean()),
+  goodMayFail: v.optional(v.boolean()),
 });
 
 const plan = v.union(v.literal("monthly"), v.literal("yearly"));

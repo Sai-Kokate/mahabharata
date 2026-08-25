@@ -57,7 +57,7 @@ const PHASES = [
   { id: "plot", title: "Plots", detail: "Plot cards only. At the start of each round the leader deals the round’s cards, face down, to other players." },
   { id: "propose", title: "Propose", detail: "3 minutes to discuss, then 1 extra minute for the leader to lock a war party of the size shown. With Excalibur, the leader also arms one party member." },
   { id: "vote", title: "Vote", detail: "Everyone supports or opposes the party. A strict majority sends them to battle; a tie turns them away." },
-  { id: "quest", title: "Quest", detail: "Party members play Success or Fail in secret. Good may only play Success. Then Excalibur, if drawn, may flip one card." },
+  { id: "quest", title: "Quest", detail: "Party members play Success or Fail in secret. Good may only play Success — unless the host turns on the house rule that lets the loyal sabotage. Then Excalibur, if drawn, may flip one card." },
   { id: "lady", title: "Lady", detail: "After quests 2–4 at 7+ players, the token holder learns one player’s true allegiance and passes the token to them." },
   { id: "end", title: "Victory", detail: "Three successes trigger the Assassin’s strike. Three fails, or five rejected parties, win for Evil." },
 ];
@@ -319,7 +319,8 @@ export default function RulesPage() {
           Everything at 5–10 players is unchanged and always takes the printed
           values. Note that the game is still five quests long: at the largest
           sizes many players never ride, which is worth knowing before you seat
-          eighteen.
+          eighteen. Free tables seat ten; the house rules above ten are part of
+          the premium tier.
         </p>
       </section>
 

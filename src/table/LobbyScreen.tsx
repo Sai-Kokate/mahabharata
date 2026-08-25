@@ -7,8 +7,9 @@
    blocks the start.
 
    The host builds the game in the full-width strip under the table: the world,
-   the optional roles, and the expansions — free vs premium per FREE_OPT_KEYS /
-   PREMIUM_OPT_KEYS, with the paid ones locked behind the host's plan.
+   the optional roles, the expansions, and the house rules — free vs premium per
+   FREE_OPT_KEYS / PREMIUM_OPT_KEYS, with the paid ones locked behind the
+   host's plan.
    ========================================================================== */
 
 import { useState } from "react";
@@ -212,6 +213,27 @@ export function LobbyScreen({
           })}
         </div>
       </div>
+
+      <div className="vd-setup__group">
+        <span className="vd-label">House rules</span>
+        <div className="vd-opts">
+          <button
+            className={`vd-opt ${opts.goodMayFail ? "is-on" : ""}`}
+            disabled={!isHost}
+            title="Printed Avalon forbids this. On, a Fail card proves nothing about who played it."
+            onClick={act(() => toggle("goodMayFail"))}
+          >
+            <span className="vd-opt__top">
+              <Swords size={12} color="var(--vd-red-ink)" />
+              <span className="vd-opt__name">The loyal may sabotage</span>
+              {opts.goodMayFail ? <Check size={13} color="var(--vd-brass)" /> : null}
+            </span>
+            <span className="vd-opt__desc">
+              Good may play Fail too — a Fail no longer proves treachery
+            </span>
+          </button>
+        </div>
+      </div>
     </section>
   );
 
@@ -253,8 +275,9 @@ export function LobbyScreen({
         </div>
 
         <p className="vd-voice">
-          Five to ten play. Anyone beyond the seats watches the board and waits
-          for one to empty.
+          Five to {room.premium.seatCap} play. Anyone beyond the seats watches
+          the board and waits for one to empty.
+          {!roomPremium && " Premium tables seat up to eighteen."}
         </p>
 
         <button className="vd-textbtn" onClick={onLeave}>
