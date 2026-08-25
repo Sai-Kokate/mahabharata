@@ -1272,3 +1272,131 @@ body { background: var(--vd-bg); }
 /* Metadata inside a tile keeps its own casing — `.vd-tile__meta` already
    declares uppercase above, and a child's own rule beats the parent's. */
 .vd-tally__who li.is-none { text-transform: none; }
+
+/* ============================================================================
+   The signed-in account block on the front page. Same engraved language: a 1px
+   container, brass only for state, and the plan read as a definition list
+   because that is what it is — a set of terms.
+   ========================================================================== */
+.lp-account {
+  width: 100%;
+  margin-top: var(--vd-6);
+  padding: var(--vd-5);
+  border: 1px solid var(--vd-rule-container);
+  background: var(--vd-bg-raised);
+  text-align: left;
+}
+.lp-account__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vd-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--vd-3);
+  border-bottom: 1px solid var(--vd-rule-structure);
+}
+.lp-account__who {
+  font: 500 16px/1.2 var(--vd-display);
+  color: var(--vd-ink);
+  overflow-wrap: anywhere;
+}
+.lp-account__rows {
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: var(--vd-3) var(--vd-4);
+  margin: var(--vd-4) 0 0;
+}
+.lp-account__rows dt {
+  font: 700 8.5px/1.6 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+.lp-account__rows dd {
+  margin: 0;
+  font: 400 14px/1.45 var(--vd-ui);
+  color: var(--vd-ink-soft);
+}
+.lp-account__note {
+  margin-top: 3px;
+  font: italic 400 13px/1.4 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+.lp-account__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-4);
+  flex-wrap: wrap;
+  margin-top: var(--vd-5);
+  padding-top: var(--vd-4);
+  border-top: 1px solid var(--vd-rule-structure);
+}
+
+/* On a phone the terms stack above their values rather than squeezing them. */
+@media (max-width: 520px) {
+  .lp-account { padding: var(--vd-4); }
+  .lp-account__rows { grid-template-columns: 1fr; gap: var(--vd-1) 0; }
+  .lp-account__rows dt { margin-top: var(--vd-3); }
+}
+
+/* ============================================================================
+   The clock alert, and your own lot on any screen.
+   ========================================================================== */
+
+/* Said once, to everyone, when the talking time runs out. Brass rule, no fill —
+   it is an announcement, not an error. */
+.vd-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-3);
+  margin-top: 15px;
+  padding: 12px var(--vd-4);
+  border: 1px solid var(--vd-brass);
+  background: var(--vd-bg-raised);
+}
+.vd-alert__mark { flex: none; width: 5px; height: 17px; background: var(--vd-brass); }
+.vd-alert__text {
+  flex: 1;
+  min-width: 0;
+  font: 500 15px/1.35 var(--vd-ui);
+  color: var(--vd-ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vd-alert { animation: vd-alert-in 260ms ease-out both; }
+}
+@keyframes vd-alert-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The hold control in the shell bar. */
+.vd-mylot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: none;
+  border: 1px solid var(--vd-rule-control);
+  color: var(--vd-ink-dim);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: none;          /* the hold must not become a scroll */
+  user-select: none;
+}
+.vd-mylot:hover { border-color: var(--vd-brass); color: var(--vd-brass); }
+.vd-mylot.is-holding { border-color: var(--vd-brass); background: var(--vd-brass); color: var(--vd-bg); }
+
+/* What the hold reveals. Over everything, centred, gone the moment you let go. */
+.vd-lotcard {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--vd-5);
+  background: rgba(10, 9, 8, 0.9);
+  pointer-events: none;        /* the button under it keeps the pointer */
+}
+.vd-lotcard > .vd-role { width: 100%; max-width: 420px; }

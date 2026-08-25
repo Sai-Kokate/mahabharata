@@ -1,0 +1,448 @@
+/* ============================================================================
+   How to play. Same Council Seal language as the board — flat, 1px rules,
+   brass for state, parchment for anything that would be acted on — so the page
+   teaches the interface at the same time as the rules.
+
+   Scoped under .lx so it cannot reach any gameplay screen.
+   ========================================================================== */
+
+.lx {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding: var(--vd-8) var(--vd-5) var(--vd-10);
+  color: var(--vd-ink);
+}
+
+/* ------------------------------------------------------------------ head -- */
+
+.lx-head { max-width: 640px; }
+.lx-title {
+  margin: var(--vd-5) 0 0;
+  font: 500 clamp(32px, 6vw, 48px)/1.05 var(--vd-display);
+  letter-spacing: 0.04em;
+}
+.lx-lede {
+  margin: var(--vd-4) 0 0;
+  font: italic 400 17px/1.6 var(--vd-voice);
+  color: var(--vd-ink-soft);
+}
+.lx-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-2);
+  margin-top: var(--vd-6);
+}
+.lx-jump a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 1px solid var(--vd-rule-control);
+  font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--vd-ink-dim);
+}
+.lx-jump a:hover { border-color: var(--vd-brass); color: var(--vd-brass); }
+
+/* --------------------------------------------------------------- section -- */
+
+.lx-section {
+  margin-top: var(--vd-10);
+  padding-top: var(--vd-8);
+  border-top: 1px solid var(--vd-rule-structure);
+  scroll-margin-top: var(--vd-5);
+}
+.lx-section__head { max-width: 640px; margin-bottom: var(--vd-6); }
+.lx-section__head h2 {
+  margin: var(--vd-3) 0 0;
+  font: 500 clamp(24px, 4vw, 32px)/1.15 var(--vd-display);
+}
+.lx-section__head p {
+  margin: var(--vd-3) 0 0;
+  font: italic 400 15px/1.55 var(--vd-voice);
+  color: var(--vd-ink-muted);
+}
+.lx-foot {
+  margin: var(--vd-5) 0 0;
+  font: italic 400 14px/1.55 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+
+/* ---------------------------------------------------------- the chooser -- */
+
+.lx-picker { display: flex; flex-direction: column; gap: var(--vd-4); }
+.lx-picker__group { display: flex; flex-direction: column; gap: var(--vd-2); }
+.lx-picker__row { display: flex; flex-wrap: wrap; gap: var(--vd-2); }
+.lx-pick {
+  flex: 1 1 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+  background: none;
+  border: 1px solid var(--vd-rule-control);
+  color: inherit;
+  cursor: pointer;
+}
+.lx-pick:hover { border-color: var(--vd-brass-edge); }
+.lx-pick.is-on { border-color: var(--vd-brass); background: var(--vd-bg-raised); }
+.lx-pick__name { font: 500 15px/1.2 var(--vd-display); color: var(--vd-ink); }
+.lx-pick.is-on .lx-pick__name { color: var(--vd-brass); }
+.lx-pick__blurb {
+  font: italic 400 13px/1.4 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+
+/* ----------------------------------------------------------------- stage -- */
+
+.lx-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: var(--vd-8);
+  align-items: center;
+  margin-top: var(--vd-6);
+  padding: var(--vd-6);
+  border: 1px solid var(--vd-rule-container);
+  background: var(--vd-bg-raised);
+}
+.lx-stage__ring { position: relative; min-width: 0; }
+.lx-stage__side { display: flex; flex-direction: column; gap: var(--vd-4); min-width: 0; }
+
+.lx-say {
+  margin: 0;
+  font: 400 clamp(17px, 2.3vw, 21px)/1.45 var(--vd-ui);
+  color: var(--vd-ink);
+}
+.lx-note {
+  margin: var(--vd-2) 0 0;
+  font: italic 400 15px/1.5 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+.lx-stamp { align-self: flex-start; }
+
+/* --------------------------------------------------------- quest cards --- */
+
+.lx-cards {
+  display: flex;
+  justify-content: center;
+  gap: var(--vd-2);
+  margin-top: var(--vd-3);
+}
+.lx-card { width: 52px; height: 74px; perspective: 900px; }
+.lx-card__in {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.lx-card__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid var(--vd-rule-strong);
+  background: var(--vd-bg-plate);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.lx-card__face--back::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid var(--vd-rule-engraved);
+}
+.lx-card__face--front { transform: rotateY(180deg); }
+.lx-card__face--front.is-success {
+  background: var(--vd-parchment);
+  border-color: var(--vd-brass-edge);
+  color: #171410;
+}
+.lx-card__face--front.is-fail {
+  background: var(--vd-red);
+  border-color: var(--vd-red);
+  color: var(--vd-ink);
+}
+
+/* --------------------------------------------------------------- tally --- */
+
+.lx-tally { display: flex; border: 1px solid var(--vd-rule-control); }
+.lx-tally__side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 11px 0 13px;
+  border-left: 1px solid var(--vd-rule-control);
+}
+.lx-tally__side:first-child { border-left: 0; }
+.lx-tally__side .vd-label { display: inline-flex; align-items: center; gap: 5px; }
+.lx-tally__side strong {
+  font: 500 30px/1 var(--vd-display);
+  color: var(--vd-brass);
+}
+.lx-tally__side--no strong { color: var(--vd-red-ink); }
+
+/* --------------------------------------------------- quest & reject track - */
+
+.lx-track { display: flex; gap: var(--vd-2); }
+.lx-track__q {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 9px 0;
+  border: 1px solid var(--vd-rule-control);
+  font: 500 14px/1 var(--vd-display);
+  color: var(--vd-rule-engraved);
+}
+.lx-track__q.is-success {
+  border-color: var(--vd-brass);
+  color: var(--vd-brass);
+}
+.lx-track__q.is-fail {
+  border-color: var(--vd-red);
+  color: var(--vd-red-ink);
+}
+
+.lx-rejects { display: flex; align-items: center; justify-content: space-between; gap: var(--vd-3); }
+.lx-rejects__pips { display: inline-flex; gap: 6px; }
+.lx-rejects__pips i {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--vd-rule-control);
+}
+.lx-rejects__pips i.is-on { background: var(--vd-red); border-color: var(--vd-red); }
+
+/* ------------------------------------------------------------ transport -- */
+
+.lx-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-3);
+  flex-wrap: wrap;
+  margin-top: var(--vd-2);
+  padding-top: var(--vd-4);
+  border-top: 1px solid var(--vd-rule-structure);
+}
+.lx-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: none;
+  border: 1px solid var(--vd-brass);
+  color: var(--vd-brass);
+  font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.lx-play:hover { background: var(--vd-brass); color: var(--vd-bg); }
+
+.lx-beats { display: flex; gap: 5px; flex: 1; min-width: 90px; }
+.lx-beat {
+  flex: 1;
+  height: 4px;
+  min-width: 10px;
+  padding: 0;
+  background: var(--vd-rule-control);
+  border: 0;
+  cursor: pointer;
+}
+.lx-beat.is-done { background: var(--vd-brass-edge); }
+.lx-beat.is-on { background: var(--vd-brass); }
+
+/* --------------------------------------------------------------- matrix -- */
+
+.lx-matrix { border: 1px solid var(--vd-rule-container); }
+.lx-matrix__head,
+.lx-matrix__row {
+  display: grid;
+  grid-template-columns: 74px 1fr 1fr 1.6fr 1.3fr;
+  gap: var(--vd-3);
+  padding: 11px var(--vd-4);
+  align-items: center;
+}
+.lx-matrix__head {
+  border-bottom: 1px solid var(--vd-rule-structure);
+  font: 700 8.5px/1 var(--vd-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+.lx-matrix__row { border-top: 1px solid var(--vd-rule-structure); font: 400 14px/1 var(--vd-ui); }
+.lx-matrix__row:first-of-type { border-top: 0; }
+.lx-matrix__row span { display: inline-flex; align-items: center; gap: 6px; color: var(--vd-ink-soft); }
+.lx-matrix__n { font: 500 17px/1 var(--vd-display) !important; color: var(--vd-ink) !important; }
+.lx-matrix__row .is-evil { color: var(--vd-red-ink); }
+.lx-matrix__sizes { font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
+
+/* ---------------------------------------------------------------- night -- */
+
+.lx-night {
+  list-style: none;
+  margin: 0 0 var(--vd-6);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lx-night__step {
+  display: flex;
+  align-items: baseline;
+  gap: var(--vd-4);
+  padding: 11px 0;
+  border-bottom: 1px solid var(--vd-rule-structure);
+}
+.lx-night__n { font: 500 17px/1 var(--vd-display); color: var(--vd-rule-engraved); min-width: 20px; }
+.lx-night__label { font: italic 400 16px/1.4 var(--vd-voice); color: var(--vd-ink-soft); }
+
+/* ----------------------------------------------------------------- cast -- */
+
+.lx-cast {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: var(--vd-3);
+}
+.lx-role {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-2);
+  padding: var(--vd-4);
+  border: 1px solid var(--vd-rule-control);
+  background: var(--vd-bg-raised);
+}
+.lx-role.is-evil { border-color: var(--vd-red-rule); }
+.lx-role header { display: flex; align-items: center; gap: 8px; color: var(--vd-brass); }
+.lx-role.is-evil header { color: var(--vd-red-ink); }
+.lx-role h3 { margin: 0; font: 500 18px/1.1 var(--vd-display); color: var(--vd-ink); }
+.lx-role__desc {
+  margin: 0;
+  font: italic 400 13.5px/1.5 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+.lx-role__sees {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: var(--vd-3);
+  border-top: 1px solid var(--vd-rule-structure);
+  font: 400 13px/1.4 var(--vd-ui);
+  color: var(--vd-ink-soft);
+}
+.lx-role__sees svg { flex: none; margin-top: 2px; color: var(--vd-brass); }
+
+/* ----------------------------------------------------------- expansions -- */
+
+.lx-cards3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--vd-3);
+}
+.lx-feature {
+  padding: var(--vd-5);
+  border: 1px solid var(--vd-rule-container);
+  background: var(--vd-bg-raised);
+}
+.lx-feature header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: var(--vd-3);
+  border-bottom: 1px solid var(--vd-rule-structure);
+  color: var(--vd-brass);
+}
+.lx-feature h3 { margin: 0; flex: 1; font: 500 19px/1.1 var(--vd-display); color: var(--vd-ink); }
+.lx-feature ol { list-style: none; margin: var(--vd-4) 0 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.lx-feature li {
+  display: flex;
+  gap: 11px;
+  font: 400 14px/1.45 var(--vd-ui);
+  color: var(--vd-ink-soft);
+}
+.lx-feature li span {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--vd-rule-control);
+  font: 500 11px/1 var(--vd-display);
+  color: var(--vd-brass);
+}
+
+/* ---------------------------------------------------------------- plots -- */
+
+.lx-plotgroup { margin-bottom: var(--vd-6); }
+.lx-plots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--vd-3);
+  margin-top: var(--vd-3);
+}
+.lx-plot {
+  padding: var(--vd-4);
+  border: 1px solid var(--vd-rule-control);
+  border-left-width: 3px;
+  background: var(--vd-bg-raised);
+}
+.lx-plot.is-instant { border-left-color: var(--vd-brass); }
+.lx-plot.is-usable { border-left-color: var(--vd-parchment-2); }
+.lx-plot.is-effect { border-left-color: var(--vd-red); }
+.lx-plot h3 { margin: 0; font: 500 17px/1.15 var(--vd-display); }
+.lx-plot p {
+  margin: var(--vd-2) 0 0;
+  font: italic 400 13.5px/1.5 var(--vd-voice);
+  color: var(--vd-ink-dim);
+}
+.lx-plot__when {
+  display: inline-block;
+  margin-top: var(--vd-3);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+
+/* ------------------------------------------------------------------ end -- */
+
+.lx-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vd-5);
+  flex-wrap: wrap;
+  margin-top: var(--vd-10);
+  padding-top: var(--vd-8);
+  border-top: 1px solid var(--vd-rule-structure);
+}
+
+/* ---------------------------------------------------------------- small -- */
+
+@media (max-width: 860px) {
+  .lx-stage { grid-template-columns: 1fr; gap: var(--vd-5); padding: var(--vd-4); }
+  .lx-stage__ring { max-width: 380px; margin-inline: auto; width: 84%; }
+  .lx-matrix__head { display: none; }
+  .lx-matrix__row {
+    grid-template-columns: 60px 1fr 1fr;
+    grid-template-areas: "n good evil" "sizes sizes sizes" "dbl dbl dbl";
+    gap: var(--vd-2) var(--vd-3);
+  }
+  .lx-matrix__row > :nth-child(1) { grid-area: n; }
+  .lx-matrix__row > :nth-child(2) { grid-area: good; }
+  .lx-matrix__row > :nth-child(3) { grid-area: evil; }
+  .lx-matrix__row > :nth-child(4) { grid-area: sizes; }
+  .lx-matrix__row > :nth-child(5) { grid-area: dbl; color: var(--vd-ink-dim); }
+}
+
+@media (max-width: 520px) {
+  .lx { padding: var(--vd-6) var(--vd-4) var(--vd-8); }
+  .lx-pick { flex-basis: 100%; }
+}

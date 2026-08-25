@@ -1,0 +1,122 @@
+/* ============================================================================
+   Your own lot, on any screen.
+
+   The night card was the only place your role existed, so from the first
+   proposal onward there was no way to check it — and at a real table people
+   forget, especially which names they were shown.
+
+   Same rule as the night card, for the same reason: press and hold, never a
+   tap toggle, and nothing about the role — not the name, not the side, not the
+   colour — exists in the DOM until the hold lands. The phone is in your hand in
+   a room full of people who would very much like a look.
+   ========================================================================== */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PointerEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { NamePlate } from "./Parts";
+import type { Room } from "./types";
+
+const HOLD_MS = 400;
+
+/** Press-and-hold. Releasing always hides again; it can never latch open. */
+export function useHold(delay = HOLD_MS) {
+  const [held, setHeld] = useState(false);
+  const timer = useRef<number | null>(null);
+
+  const clear = useCallback(() => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+
+  const end = useCallback(() => {
+    clear();
+    setHeld(false);
+  }, [clear]);
+
+  const start = useCallback(
+    (e: PointerEvent<HTMLElement>) => {
+      clear();
+      // The reveal resizes what is under the finger; capture keeps every later
+      // event aimed at the button so the hold cannot cancel itself.
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture is a convenience; the window listeners below still end it */
+      }
+      timer.current = window.setTimeout(() => setHeld(true), delay);
+    },
+    [clear, delay],
+  );
+
+  // Letting go anywhere hides it, even if the finger drifted off.
+  useEffect(() => {
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+    return () => {
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      clear();
+    };
+  }, [end, clear]);
+
+  return { held, start, end };
+}
+
+export function RoleReveal({
+  room, theme,
+}: {
+  room: Room;
+  theme: { goodTeamName: string; evilTeamName: string };
+}) {
+  const { held, start, end } = useHold();
+  const me = room.me;
+
+  // Watchers hold nothing, so there is nothing to offer them.
+  if (!me || me.isWatcher || !me.role) return null;
+
+  const roleDef = room.theme.roles.find((r) => r.id === me.role);
+  const evil = me.team === "evil";
+
+  return (
+    <>
+      <button
+        className={`vd-mylot ${held ? "is-holding" : ""}`}
+        type="button"
+        onPointerDown={start}
+        onPointerUp={end}
+        onPointerCancel={end}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {held ? <Eye size={12} /> : <EyeOff size={12} />}
+        {held ? "Release to hide" : "Hold to see your lot"}
+      </button>
+
+      {held && (
+        <div className="vd-lotcard" role="dialog" aria-live="polite">
+          <div className={`vd-studded vd-role ${evil ? "vd-role--evil" : ""}`}>
+            <span className="vd-stud-b" aria-hidden />
+            <div className="vd-role__side">
+              {evil
+                ? `Sworn against · ${theme.evilTeamName}`
+                : `Sworn to · ${theme.goodTeamName}`}
+            </div>
+            <div className="vd-role__name">{roleDef?.name ?? "—"}</div>
+            <p className="vd-voice" style={{ margin: 0 }}>{roleDef?.desc}</p>
+
+            <div style={{ marginTop: 14 }}>
+              <span className="vd-label vd-label--dim">
+                {roleDef?.knowledgeLabel ?? "You are shown nothing."}
+              </span>
+              {me.known.length > 0 && (
+                <div className="vd-row" style={{ marginTop: 9 }}>
+                  {me.known.map((nm) => <NamePlate key={nm}>{nm}</NamePlate>)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

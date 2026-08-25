@@ -135,6 +135,9 @@ export default function RulesPage() {
   return (
     <div className="rules-page">
       <header className="rules-hero">
+        <a className="rules-back" href="/learn" style={{ marginRight: 18 }}>
+          ← How to play
+        </a>
         <a className="rules-back" href="/play">
           ← Back to council
         </a>

@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as avalon from "../avalon.js";
 import type * as billing from "../billing.js";
+import type * as crons from "../crons.js";
 import type * as email from "../email.js";
 import type * as entitlements from "../entitlements.js";
 import type * as http from "../http.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   avalon: typeof avalon;
   billing: typeof billing;
+  crons: typeof crons;
   email: typeof email;
   entitlements: typeof entitlements;
   http: typeof http;

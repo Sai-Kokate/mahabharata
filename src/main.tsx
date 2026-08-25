@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient } from "convex/react";
 import App from "./App";
@@ -6,6 +6,9 @@ import RulesPage from "./RulesPage";
 import AdminPage from "./AdminPage";
 import UpgradePage from "./UpgradePage";
 import { SignInPage } from "./SignIn";
+// Standalone, animation-heavy, and read once — it has no business riding
+// along in the bundle every player downloads to sit at a table.
+const LearnPage = lazy(() => import("./LearnPage"));
 import { LandingPage } from "./LandingPage";
 import { AuthProvider } from "./auth";
 import { adoptLegacyHashRoute, useLinkInterception, useLocation } from "./router";
@@ -24,6 +27,51 @@ if (!url) {
 
 const convex = new ConvexReactClient(url);
 
+/**
+ * One title tag serves every route in a single-page app, so a crawler — and a
+ * bookmark, and a browser-history search — sees "Decevia" for all six. These
+ * are the per-route replacements. The index.html copy stays the default and
+ * the one a crawler that runs no JS will read.
+ */
+const PAGE_META: Record<string, { title: string; description: string }> = {
+  landing: {
+    title: "Decevia — Social deduction for 5 to 18 players",
+    description:
+      "Convene a council of 5 to 18. Some of you are sworn to the realm and some of you are lying about it. Free online social deduction across five worlds.",
+  },
+  learn: {
+    title: "How to play — Decevia",
+    description:
+      "An animated walkthrough: a round from start to finish, every character, the three expansions and all nine plot cards.",
+  },
+  rules: {
+    title: "The rules — Decevia",
+    description:
+      "Team sizes, quest sizes, every role's night vision, the expansions, and the house rules for tables above ten.",
+  },
+  signin: {
+    title: "Sign in — Decevia",
+    description: "Sign in or create an account to hold a seat on a plan.",
+  },
+  upgrade: {
+    title: "Plans — Decevia",
+    description: "Unlock every role, all three expansions and all five worlds.",
+  },
+  game: { title: "The council — Decevia", description: "" },
+  admin: { title: "Admin — Decevia", description: "" },
+};
+
+function useDocumentMeta(route: string) {
+  useEffect(() => {
+    const meta = PAGE_META[route];
+    if (!meta) return;
+    document.title = meta.title;
+    if (!meta.description) return;
+    const tag = document.querySelector('meta[name="description"]');
+    if (tag) tag.setAttribute("content", meta.description);
+  }, [route]);
+}
+
 // Before the first render, so `useLocation` never sees the hash form.
 adoptLegacyHashRoute();
 
@@ -35,24 +83,9 @@ function Router() {
   // An invite link (…/?code=ABCD) has to reach the table even though the
   // index is now a holding page, so it counts as a request to play.
   const invited = new URLSearchParams(search).has("code");
+  const route = routeFor(pathname, invited);
+  useDocumentMeta(route);
 
-  const at = (path: string) =>
-    pathname === path || pathname.startsWith(`${path}/`);
-
-  const route = at("/signin")
-    ? "signin"
-    : at("/rules")
-      ? "rules"
-      : at("/admin")
-        ? "admin"
-        : at("/upgrade")
-          ? "upgrade"
-          : at("/play") || invited
-            ? "game"
-            : "landing";
-
-  // Everything outside a game room sits on the same board as the table, so the
-  // whole app reads as one surface.
   // The landing page paints its own board, so it sits outside the shared shell.
   if (route === "landing") {
     return (
@@ -62,12 +95,19 @@ function Router() {
     );
   }
 
+  // Everything outside a game room sits on the same board as the table, so the
+  // whole app reads as one surface.
   if (route !== "game") {
     return (
       <div className="app-root">
         <div className="vd-board">
           <div className="vd-content">
             {route === "signin" && <SignInPage />}
+            {route === "learn" && (
+              <Suspense fallback={<div className="vd-label vd-label--dim">Loading…</div>}>
+                <LearnPage />
+              </Suspense>
+            )}
             {route === "rules" && <RulesPage />}
             {route === "admin" && <AdminPage />}
             {route === "upgrade" && <UpgradePage />}
@@ -82,6 +122,26 @@ function Router() {
       <App />
     </div>
   );
+}
+
+/** Path → route name. Split out so the title effect and the render agree. */
+function routeFor(pathname: string, invited: boolean) {
+  const at = (path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+
+  return at("/signin")
+    ? "signin"
+    : at("/learn")
+      ? "learn"
+      : at("/rules")
+        ? "rules"
+        : at("/admin")
+          ? "admin"
+          : at("/upgrade")
+            ? "upgrade"
+            : at("/play") || invited
+              ? "game"
+              : "landing";
 }
 
 createRoot(document.getElementById("root")!).render(

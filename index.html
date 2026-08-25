@@ -6,7 +6,43 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>Decevia — Where Friends Become Foes</title>
+    <title>Decevia — Social deduction for 5 to 18 players</title>
+    <meta
+      name="description"
+      content="Convene a council of 5 to 18. Some of you are sworn to the realm and some of you are lying about it. Free online social deduction across five worlds — no download, no account, just a four-letter code."
+    />
+    <link rel="canonical" href="https://www.decevia.space/" />
+    <meta name="theme-color" content="#131110" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- The tab. SVG for anything modern; the PNG is the fallback, and the
+         180px one is what iOS puts on a home screen. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Sharing. og:image must be an absolute URL — relative paths are ignored
+         by every crawler that matters. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Decevia" />
+    <meta property="og:title" content="Decevia — Where Friends Become Foes" />
+    <meta
+      property="og:description"
+      content="Social deduction for 5 to 18 players. Five quests decide it, and some of the table is lying. Free to play in the browser."
+    />
+    <meta property="og:url" content="https://www.decevia.space/" />
+    <meta property="og:image" content="https://www.decevia.space/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Decevia — where friends become foes" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Decevia — Where Friends Become Foes" />
+    <meta
+      name="twitter:description"
+      content="Social deduction for 5 to 18 players. Five quests decide it, and some of the table is lying."
+    />
+    <meta name="twitter:image" content="https://www.decevia.space/og.png" />
     <!-- Fonts live here, not in an @import: Vite concatenates styles.css and
          seal.css into one file, so seal.css's @import landed mid-bundle and was
          dropped in a production build — taking EB Garamond and Manrope, the
@@ -17,6 +53,26 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
     />
+
+    <!-- What the app is, for the crawlers that read it. Kept minimal and true:
+         no aggregateRating, no fake offers. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Decevia",
+        "url": "https://www.decevia.space/",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any modern browser",
+        "description": "Online social deduction for 5 to 18 players. Convene a council, share a four-letter code, and find out who at your table is lying.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "INR",
+          "description": "Free to play. An optional plan unlocks extra roles, expansions and worlds."
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

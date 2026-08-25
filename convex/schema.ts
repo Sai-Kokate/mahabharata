@@ -158,6 +158,14 @@ export default defineSchema({
         overturnedBy: v.optional(v.string()), // King Returns was played
       }),
     ),
+    /**
+     * The leader who let the clock run out, and the round it cost them. Keyed
+     * to the round it CREATED, so the table sees why the seal moved and the
+     * notice retires itself when the next round begins.
+     */
+    lastSkip: v.optional(
+      v.object({ roundId: v.number(), playerId: v.string() }),
+    ),
     lastQuest: v.optional(
       v.object({
         questIndex: v.number(),

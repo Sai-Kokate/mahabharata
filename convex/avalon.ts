@@ -748,24 +748,39 @@ export const leaveRoom = mutation({
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000;
 
 /**
+ * How many rooms one sweep will purge. A mutation is one transaction with hard
+ * ceilings — 4,096 index-range reads, 16,000 documents written — and purging a
+ * room costs seven index reads plus every row hanging off it. Unbounded, a big
+ * enough backlog would blow those limits, and because the transaction is atomic
+ * the WHOLE sweep would roll back: nothing purged, backlog grows, every future
+ * run fails the same way. It would never recover on its own.
+ */
+const SWEEP_BATCH = 100;
+
+/**
  * Rooms whose players all closed a tab never call `leaveRoom`, so nothing ever
- * tells the server the table went home. This is the backstop: once a day, any
- * room older than the TTL is purged with everything hanging off it.
+ * tells the server the table went home. This is the backstop: any room older
+ * than the TTL is purged with everything hanging off it.
+ *
+ * Convex orders a table by `_creationTime`, so the oldest rooms are the first
+ * ones read — taking a batch off the front finds every stale room without
+ * scanning the table. If the batch fills, there may be more, so it comes round
+ * again in a minute rather than waiting for the next cron.
  */
 export const sweepAbandonedRooms = internalMutation({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() - ROOM_TTL_MS;
-    // The rooms table holds one row per live game, so a full scan here is
-    // cheaper than carrying an index only this sweep would ever read.
-    const rooms = await ctx.db.query("rooms").collect();
-    let purged = 0;
-    for (const room of rooms) {
-      if (room._creationTime >= cutoff) continue;
-      await purgeRoom(ctx, room._id);
-      purged++;
+    const oldest = await ctx.db.query("rooms").order("asc").take(SWEEP_BATCH);
+    const stale = oldest.filter((room) => room._creationTime < cutoff);
+
+    for (const room of stale) await purgeRoom(ctx, room._id);
+
+    // A full batch of stale rooms means the backlog may run deeper.
+    if (stale.length === SWEEP_BATCH) {
+      await ctx.scheduler.runAfter(60_000, internal.avalon.sweepAbandonedRooms, {});
     }
-    return { purged, scanned: rooms.length };
+    return { purged: stale.length, more: stale.length === SWEEP_BATCH };
   },
 });
 
@@ -1046,6 +1061,12 @@ export const passSealIfLeaderIsSilent = internalMutation({
       roundId: room.roundId + 1,
       proposedTeam: [],
       excaliburHolder: undefined,
+      // So the table is told why the seal moved. Without this the leader
+      // simply changes and nobody watching knows a clock ran out.
+      lastSkip: {
+        roundId: room.roundId + 1,
+        playerId: seated[room.leaderIndex]?.playerId ?? "",
+      },
     });
   },
 });
@@ -1830,6 +1851,15 @@ export const getRoom = query({
       assassinGuess: room.assassinGuess ?? null,
       assassinGuess2: room.assassinGuess2 ?? null,
       assassinMode: room.assassinMode ?? null,
+      /** Who ran out of time, if that is why this round's leader changed. */
+      lastSkip:
+        room.lastSkip && room.lastSkip.roundId === room.roundId
+          ? {
+              name:
+                players.find((p) => p.playerId === room.lastSkip!.playerId)?.name
+                ?? "The leader",
+            }
+          : null,
       discussEndsAt: room.discussEndsAt ?? null,
       selectEndsAt: room.selectEndsAt ?? null,
       phaseEndsAt: room.phaseEndsAt ?? null,

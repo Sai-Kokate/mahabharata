@@ -2264,3 +2264,20 @@ select:focus {
   gap: 8px;
   margin-bottom: 6px;
 }
+
+/* ============================================================================
+   The prerendered copy that ships inside #root for crawlers and for anyone
+   whose JavaScript never arrives. React replaces it on mount, so this is only
+   ever seen without JS — it just has to be legible, not designed.
+   ========================================================================== */
+.prerender {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  color: #d9d2c4;
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+}
+.prerender h1 { font-size: 2rem; letter-spacing: 0.02em; }
+.prerender h2 { margin-top: 2rem; font-size: 1.25rem; color: #c2a55f; }
+.prerender a { color: #c2a55f; }

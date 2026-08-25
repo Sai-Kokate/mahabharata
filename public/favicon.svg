@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Decevia">
+  <!--
+    The tab icon. Same counterchanged mark as src/assets/mark.svg, but drawn on
+    its own dark ground: a favicon sits on whatever chrome the browser paints,
+    light or dark, and a bare brass outline disappears against half of them.
+    Geometry is scaled up so the 1px stroke survives being drawn at 16px.
+  -->
+  <rect width="64" height="64" fill="#131110"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#c2a55f" stroke-width="2.5"/>
+  <path d="M32 11 A21 21 0 0 1 32 53 Z" fill="#c2a55f"/>
+  <circle cx="39.7" cy="32" r="3.8" fill="#131110"/>
+  <circle cx="24.3" cy="32" r="3.8" fill="#c2a55f"/>
+</svg>

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# A council code is not a page. These are per-room and per-account surfaces
+# with nothing for a crawler to index.
+Disallow: /play
+Disallow: /admin
+Disallow: /upgrade
+
+Sitemap: https://www.decevia.space/sitemap.xml

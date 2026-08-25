@@ -3,7 +3,7 @@
    288 | 1fr | 274 column grid that collapses to one column under 1100px.
    ========================================================================== */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   BadgeCheck, Crown, LogIn, LogOut, RotateCcw, ScrollText, Shield, Sparkles,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { Account, Room } from "./types";
 import { displayName, leaderOf, partySize } from "./types";
+import { RoleReveal } from "./RoleReveal";
 
 export function TableShell({
   room, pid, theme, emblemSrc, account, error,
@@ -18,7 +19,7 @@ export function TableShell({
 }: {
   room: Room;
   pid: string;
-  theme: { name: string };
+  theme: { name: string; goodTeamName: string; evilTeamName: string };
   emblemSrc: string;
   account: Account;
   error?: string;
@@ -76,7 +77,19 @@ export function TableShell({
           </div>
         </header>
 
+        <ClockAlert room={room} />
         <PhaseBanner room={room} pid={pid} />
+
+        {/* Why the seal moved, when it moved on its own. */}
+        {room.lastSkip && room.phase === "propose" && (
+          <div className="vd-banner vd-banner--away" role="status">
+            <span className="vd-banner__mark" aria-hidden />
+            <span className="vd-banner__text">
+              {displayName(room.lastSkip.name)} ran out of time. The seal passed
+              on, and the same quest is being named again — no rejection counted.
+            </span>
+          </div>
+        )}
 
         {/* Every phase can be abandoned or started over. These used to live
             only on the reckoning screen, which meant a table that mis-set its
@@ -106,6 +119,9 @@ export function TableShell({
               onConfirm={onClose}
               danger
             />
+          )}
+          {room.phase !== "lobby" && room.phase !== "reveal" && (
+            <RoleReveal room={room} theme={theme} />
           )}
           {/* Every participant, every phase — host included. Mid-game it keeps
               your seat so you can rejoin, which is why the wording differs. */}
@@ -286,5 +302,49 @@ function Confirm({
         No
       </button>
     </span>
+  );
+}
+
+/**
+ * The four minutes running out is the single most missable moment in the game:
+ * the clock keeps counting, the screen does not change, and the table carries
+ * on arguing while the leader's minute drains. This is the thing that says so,
+ * to everybody, once.
+ *
+ * Entirely client-side — the deadline is already on the room, so no round trip
+ * and no new state. It fires on the CROSSING, not on the value, so a tab that
+ * opens late does not announce a moment it missed.
+ */
+function ClockAlert({ room }: { room: Room }) {
+  const [alert, setAlert] = useState<string | null>(null);
+  const seen = useRef<string>("");
+
+  useEffect(() => {
+    if (room.phase !== "propose" || !room.discussEndsAt) return;
+    const key = `${room.roundId}:${room.discussEndsAt}`;
+    if (seen.current === key) return;
+    const left = room.discussEndsAt - Date.now();
+    if (left <= 0) { seen.current = key; return; }
+
+    const t = setTimeout(() => {
+      seen.current = key;
+      setAlert("Talking time is over — one minute to name the party.");
+    }, left);
+    return () => clearTimeout(t);
+  }, [room.phase, room.roundId, room.discussEndsAt]);
+
+  useEffect(() => {
+    if (!alert) return;
+    const t = setTimeout(() => setAlert(null), 7000);
+    return () => clearTimeout(t);
+  }, [alert]);
+
+  if (!alert) return null;
+  return (
+    <div className="vd-alert" role="alert">
+      <span className="vd-alert__mark" aria-hidden />
+      <span className="vd-alert__text">{alert}</span>
+      <button className="vd-textbtn" onClick={() => setAlert(null)}>Dismiss</button>
+    </div>
   );
 }

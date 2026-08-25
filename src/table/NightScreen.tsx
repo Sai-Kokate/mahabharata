@@ -11,59 +11,11 @@
    knowing *when* you were shown something is part of the game.
    ========================================================================== */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent } from "react";
 import { Eye, EyeOff, Sword } from "lucide-react";
 import { Studded } from "./TableShell";
 import { NamePlate } from "./Parts";
+import { useHold } from "./RoleReveal";
 import type { TableProps } from "./types";
-
-const HOLD_MS = 600;
-
-/** Press-and-hold. Releasing always hides again; it can never latch open. */
-function useHold(delay = HOLD_MS) {
-  const [held, setHeld] = useState(false);
-  const timer = useRef<number | null>(null);
-
-  const clear = useCallback(() => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    timer.current = null;
-  }, []);
-
-  const end = useCallback(() => {
-    clear();
-    setHeld(false);
-  }, [clear]);
-
-  const start = useCallback(
-    (e: PointerEvent<HTMLElement>) => {
-      clear();
-      // The reveal grows the card, sliding the button out from under a pointer
-      // that never moved. Capture keeps every later event aimed at the button,
-      // so the reveal can't cancel itself the moment it lands.
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        /* capture is a convenience; the window listeners below still end it */
-      }
-      timer.current = window.setTimeout(() => setHeld(true), delay);
-    },
-    [clear, delay],
-  );
-
-  // Letting go anywhere hides the card, even if the finger drifted off it.
-  useEffect(() => {
-    window.addEventListener("pointerup", end);
-    window.addEventListener("pointercancel", end);
-    return () => {
-      window.removeEventListener("pointerup", end);
-      window.removeEventListener("pointercancel", end);
-      clear();
-    };
-  }, [end, clear]);
-
-  return { held, start, end };
-}
 
 export function NightScreen({
   room, pid, theme, act, onBegin,
@@ -182,7 +134,11 @@ export function NightScreen({
         <span className="vd-label">How the night went</span>
         <div>
           {steps.map((s) => {
-            const mine = s.step === myStep;
+            // Each step belongs to exactly one role — 3 is Merlin, 4 Percival,
+            // 2 Guinevere, 5 a lover, 1 the evil table. So marking YOUR step
+            // names your role outright. It waits for the hold like everything
+            // else on this screen; the script itself is public and stays.
+            const mine = held && s.step === myStep;
             return (
               <div key={s.step} className={`vd-script__row ${mine ? "is-mine" : ""}`}>
                 <span className="vd-script__n">{s.step}</span>
@@ -192,7 +148,14 @@ export function NightScreen({
             );
           })}
         </div>
-        {myStep === 0 && !watching && (
+        {!held && !watching && (
+          <p className="vd-voice" style={{ margin: 0 }}>
+            Hold your card to see which of these was yours.
+          </p>
+        )}
+        {/* "No vision is yours" is itself a tell — it rules out Merlin,
+            Percival, Guinevere, the lovers and the evil table in one line. */}
+        {held && myStep === 0 && !watching && (
           <p className="vd-voice" style={{ margin: 0 }}>
             You slept through all of it. No vision is yours.
           </p>
