@@ -15,7 +15,12 @@ const disc = (color: string, size: number) => ({
   width: size, height: size, borderRadius: "50%", background: color,
 });
 
-/** 10 marks — one per seat at the maximum table size. */
+/**
+ * One mark per seat at the maximum table size. MUST stay at least
+ * `MAX_PLAYERS` long: `dealSigils` hands out distinct marks only while the
+ * palette outlasts the table, and a seal with two identical sigils on it is
+ * a table that cannot tell two players apart.
+ */
 export const SIGILS: Array<(p: SigilProps) => JSX.Element> = [
   // 0 · sun — the seal-bearer's mark reads well with a brass rim
   ({ size = 24, color }) => (
@@ -75,6 +80,59 @@ export const SIGILS: Array<(p: SigilProps) => JSX.Element> = [
       clipPath: "polygon(50% 0,100% 50%,100% 100%,50% 50%,0 100%,0 50%)",
     }} />
   ),
+  // 10 · vale — the peak inverted
+  ({ size = 24, color }) => (
+    <span style={{ width: size, height: size, background: color, clipPath: "polygon(0 0,100% 0,50% 100%)" }} />
+  ),
+  // 11 · saltire — the cross turned on its corner
+  ({ size = 24, color }) => (
+    <span style={{ position: "relative", width: size, height: size }}>
+      <i style={{ position: "absolute", left: "50%", top: "50%", translate: "-50% -50%", rotate: "45deg", width: size * 0.18, height: size * 1.18, background: color }} />
+      <i style={{ position: "absolute", left: "50%", top: "50%", translate: "-50% -50%", rotate: "-45deg", width: size * 0.18, height: size * 1.18, background: color }} />
+    </span>
+  ),
+  // 12 · void lozenge — the lozenge drawn, not filled
+  ({ size = 24, color }) => (
+    <span style={{ width: size * 0.72, height: size * 0.72, border: `2px solid ${color}`, rotate: "45deg" }} />
+  ),
+  // 13 · bend — a single bar laid across
+  ({ size = 24, color }) => (
+    <span style={{ position: "relative", width: size, height: size }}>
+      <i style={{ position: "absolute", left: "50%", top: "50%", translate: "-50% -50%", rotate: "-45deg", width: size * 0.2, height: size * 1.18, background: color }} />
+    </span>
+  ),
+  // 14 · fess — two bars, stacked
+  ({ size = 24, color }) => (
+    <span style={{ display: "flex", flexDirection: "column", gap: size * 0.22, width: size * 0.88 }}>
+      <i style={{ height: size * 0.22, background: color }} />
+      <i style={{ height: size * 0.22, background: color }} />
+    </span>
+  ),
+  // 15 · mullet — the five-pointed star
+  ({ size = 24, color }) => (
+    <span style={{
+      width: size, height: size, background: color,
+      clipPath: "polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)",
+    }} />
+  ),
+  // 16 · quarters — the field divided, two quarters charged
+  ({ size = 24, color }) => (
+    <span style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: size * 0.1, width: size * 0.8, height: size * 0.8 }}>
+      <i style={{ background: color }} />
+      <i />
+      <i />
+      <i style={{ background: color }} />
+    </span>
+  ),
+  // 17 · ward — the orb held inside the gate
+  ({ size = 24, color }) => (
+    <span style={{
+      width: size * 0.82, height: size * 0.82, border: `2px solid ${color}`,
+      display: "grid", placeItems: "center",
+    }}>
+      <span style={disc(color, size * 0.34)} />
+    </span>
+  ),
 ];
 
 /** Stable, collision-tolerant index from a player id (FNV-1a). */
@@ -91,13 +149,28 @@ export function sigilIndex(playerId: string): number {
  * Deal distinct sigils to a table: hash first, then resolve collisions by
  * walking to the next free mark. Deterministic given the same seat order, so
  * every client renders the same board.
+ *
+ * The walk is bounded to ONE lap on purpose. It used to be
+ * `while (taken.has(i)) i = (i + 1) % SIGILS.length`, which is an infinite loop
+ * the moment the table outgrows the palette: with ten marks and an eleventh
+ * player every index is already spoken for, so the walk never finds a free one
+ * and the render never returns. This runs during render on every client, so the
+ * eleventh player to join froze the tab for the whole table.
+ *
+ * The palette is now `MAX_PLAYERS` long, so a lap always finds a free mark for
+ * any legal table and the fallback below is unreachable in practice. It stays
+ * anyway: a hang is a far worse failure than a repeated sigil, and this must not
+ * depend on someone remembering to grow `SIGILS` alongside `MAX_PLAYERS`.
  */
 export function dealSigils(playerIds: string[]): Record<string, number> {
   const taken = new Set<number>();
   const out: Record<string, number> = {};
   for (const id of playerIds) {
-    let i = sigilIndex(id);
-    while (taken.has(i)) i = (i + 1) % SIGILS.length;
+    const start = sigilIndex(id);
+    let i = start;
+    for (let step = 1; step <= SIGILS.length && taken.has(i); step++) {
+      i = (start + step) % SIGILS.length;
+    }
     taken.add(i);
     out[id] = i;
   }
