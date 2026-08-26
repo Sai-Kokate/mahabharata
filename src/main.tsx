@@ -10,7 +10,6 @@ import { SignInPage } from "./SignIn";
 // along in the bundle every player downloads to sit at a table.
 const LearnPage = lazy(() => import("./LearnPage"));
 import { LandingPage } from "./LandingPage";
-import TestingPage from "./TestingPage";
 import { AuthProvider } from "./auth";
 import {
   adoptLegacyHashRoute,
@@ -64,7 +63,6 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
   },
   game: { title: "The council — Decevia", description: "" },
   admin: { title: "Admin — Decevia", description: "" },
-  testing: { title: "Testing — Decevia", description: "Widget testing page." },
 };
 
 function useDocumentMeta(route: string) {
@@ -120,7 +118,6 @@ function Router() {
             {route === "rules" && <RulesPage />}
             {route === "admin" && <AdminPage />}
             {route === "upgrade" && <UpgradePage />}
-            {route === "testing" && <TestingPage />}
           </div>
         </div>
       </div>
@@ -149,11 +146,9 @@ function routeFor(pathname: string, invited: boolean) {
           ? "admin"
           : at("/upgrade")
             ? "upgrade"
-            : at("/testing")
-              ? "testing"
-              : at("/play") || invited
-                ? "game"
-                : "landing";
+            : at("/play") || invited
+              ? "game"
+              : "landing";
 }
 
 createRoot(document.getElementById("root")!).render(

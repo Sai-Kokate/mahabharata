@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Testing</title>
+</head>
+<body>
+  <!-- This is where the widget renders -->
+  <div id="amber-widget"></div>
+  <div class="amber-link" style="text-align: center"></div>
+
+  <script>
+    ;(function (w, d, s, o, f, js, fjs) {
+      w[o] =
+        w[o] ||
+        function () {
+          ;(w[o].q = w[o].q || []).push(arguments)
+        }
+      ;(js = d.createElement(s)), (fjs = d.getElementsByTagName(s)[0])
+      js.id = o
+      js.src = f
+      js.async = 1
+      fjs.parentNode.insertBefore(js, fjs)
+    })(window, document, 'script', '_aw', 'https://d341zbz41jo7w1.cloudfront.net/widget/list/3.1.0.js')
+    _aw('init', {
+      element: document.getElementById('amber-widget'), // required
+      location: 'london', // required
+      partnerId: 'test', // required
+      fontFamily: '', // optional default is Open Sans
+      sort: 'Recommended', // optional default is Recommended
+      numListings: 6, // optional default is 6
+    })
+  </script>
+</body>
+</html>
