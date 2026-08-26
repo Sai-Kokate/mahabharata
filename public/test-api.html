@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Testing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 32px; background: #1a1a2e; color: #eee; }
+    h1 { margin-bottom: 24px; font-size: 1.5rem; }
+    .buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover:not(:disabled) { opacity: 0.85; }
+    .btn-1 { background: #4fc3f7; color: #111; }
+    .btn-2 { background: #ab47bc; color: #fff; }
+    .meta { font-size: 0.8rem; color: #aaa; margin-bottom: 8px; }
+    pre {
+      background: #0d0d1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+      max-height: 70vh;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>API Testing</h1>
+  <div class="buttons">
+    <button class="btn-1" id="btn-default" onclick="callApi('default')">Call API (Default)</button>
+    <button class="btn-2" id="btn-java" onclick="callApi('java')">Call API (Java)</button>
+  </div>
+  <div class="meta" id="meta"></div>
+  <pre id="output">Click a button to call the API...</pre>
+
+  <script>
+    const BASE_URL = 'https://base.amberstudent.com/api/v1/inventories';
+    const PARAMS = {
+      p: '1',
+      limit: '10',
+      only: 'id,name,parent_id,pricing,images,videos,location,canonical_name,tags,features,source_link,available,slashed_available_price,nearby_distances,provider_id',
+      methods: 'destination_distances,active_children_count,location_coordinates,reviews_count,reviews_rating,meta_short,feature_tags,amber_sales,images_with_featured,review_summary',
+      region_radius: '20000',
+      region_type: 'circle',
+      sort_key: 'distance',
+      sort_order: 'asc',
+      statuses: 'active',
+      use_open_search: 'true',
+      isInternalUser: 'false',
+      region_canonical_name: 'london-1811028205760',
+      with_active_rooms: 'true',
+      use_v2_structure: 'true',
+      lang: 'en',
+      destination_coordinates: '51.5073509,-0.1277583',
+    };
+
+    async function callApi(type) {
+      const btnDefault = document.getElementById('btn-default');
+      const btnJava = document.getElementById('btn-java');
+      const output = document.getElementById('output');
+      const meta = document.getElementById('meta');
+
+      btnDefault.disabled = true;
+      btnJava.disabled = true;
+      output.textContent = 'Loading...';
+      meta.textContent = '';
+
+      const params = new URLSearchParams(PARAMS);
+      if (type === 'java') {
+        params.set('use_java_api', 'true');
+      }
+
+      const url = `${BASE_URL}?${params.toString()}`;
+      const label = type === 'java' ? 'Java API' : 'Default API';
+
+      const start = performance.now();
+      try {
+        const res = await fetch(url);
+        const elapsed = (performance.now() - start).toFixed(0);
+        const data = await res.json();
+
+        meta.textContent = `${label} — ${res.status} ${res.statusText} — ${elapsed}ms`;
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        const elapsed = (performance.now() - start).toFixed(0);
+        meta.textContent = `${label} — ERROR — ${elapsed}ms`;
+        output.textContent = err.message;
+      } finally {
+        btnDefault.disabled = false;
+        btnJava.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
