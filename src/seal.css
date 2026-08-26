@@ -1400,3 +1400,21 @@ body { background: var(--vd-bg); }
   pointer-events: none;        /* the button under it keeps the pointer */
 }
 .vd-lotcard > .vd-role { width: 100%; max-width: 420px; }
+
+/* Per-quest card counts in the ledger. The unveil is a moment; this is the
+   record the table goes back to when it argues about the last round. */
+.vd-chron__tally {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin-top: 9px; padding-top: 9px;
+  border-top: 1px solid var(--vd-rule-container);
+}
+.vd-chron__tally-part { font: 400 12px/1 var(--vd-ui); color: var(--vd-ink-muted); }
+.vd-chron__tally-part b {
+  font: 600 14px/1 var(--vd-display); color: var(--vd-ink); margin-right: 3px;
+}
+.vd-chron__tally-part.is-fail b { color: var(--vd-red-ink); }
+.vd-chron__tally-of {
+  margin-left: auto;
+  font: 700 8.5px/1 var(--vd-ui); letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--vd-ink-dim);
+}

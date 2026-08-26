@@ -43,6 +43,7 @@ export function ReckoningScreen({
           questIndex={-1}
           results={room.questResults}
           doubleFail={doubleFailQuests(n)}
+          log={room.questLog ?? []}
         />
 
         {room.lancelot?.swapped && (

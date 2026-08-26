@@ -166,6 +166,30 @@ export default defineSchema({
     lastSkip: v.optional(
       v.object({ roundId: v.number(), playerId: v.string() }),
     ),
+    /**
+     * Every quest that has already been ridden, in order. `questResults` says
+     * only whether a quest held; this says by how much — the table wants to
+     * know that Quest II fell on ONE fail out of four, not merely that it fell.
+     *
+     * Kept as its own log rather than widened onto `questResults` because that
+     * array is positional (index === quest number, `null` for unridden) and is
+     * read as such in a dozen places.
+     */
+    questLog: v.optional(
+      v.array(
+        v.object({
+          questIndex: v.number(),
+          /** Riders on the party — successes + fails always equals this. */
+          size: v.number(),
+          successes: v.number(),
+          fails: v.number(),
+          /** Did it hold? Not `fails === 0` — Q4 at 7+ needs two to sink. */
+          success: v.boolean(),
+          /** How many fails this quest needed to sink, for the record. */
+          failsNeeded: v.number(),
+        }),
+      ),
+    ),
     lastQuest: v.optional(
       v.object({
         questIndex: v.number(),

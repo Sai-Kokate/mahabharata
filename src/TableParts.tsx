@@ -62,12 +62,19 @@ export function QuestLadder({
   questIndex,
   results,
   doubleFail = [],
+  log = [],
 }: {
   sizes: number[];                                  // QUEST_SIZES[playerCount]
   questIndex: number;
   results: (("success" | "fail") | null)[];
   /** Quests needing two fails: Q4 at 7+, and Q3 as well above ten. */
   doubleFail?: number[];
+  /**
+   * Counts for quests already ridden. A ridden rung swaps its party size for
+   * what actually came back, so the history is legible from every screen
+   * without opening the ledger.
+   */
+  log?: Array<{ questIndex: number; successes: number; fails: number }>;
 }) {
   return (
     <div>
@@ -76,6 +83,7 @@ export function QuestLadder({
         {sizes.map((size, i) => {
           const result = results[i];
           const active = i === questIndex;
+          const tally = log.find((q) => q.questIndex === i);
           return (
             <div key={i} className={active ? "is-active" : undefined} style={{ position: "relative" }}>
               <div className="vd-numeral" style={{
@@ -84,11 +92,28 @@ export function QuestLadder({
               }}>
                 {ROMAN[i]}
               </div>
-              <div style={{
-                marginTop: 5, font: "700 9px/1 var(--vd-ui)",
-                color: active ? "rgba(23,20,16,.6)" : "var(--vd-ink-dim)",
-              }}>
-                {size}
+              <div
+                style={{
+                  marginTop: 5, font: "700 9px/1 var(--vd-ui)",
+                  color: active ? "rgba(23,20,16,.6)" : "var(--vd-ink-dim)",
+                }}
+                title={
+                  tally
+                    ? `${tally.successes} success, ${tally.fails} fail of ${tally.successes + tally.fails}`
+                    : `${size} ride`
+                }
+              >
+                {tally ? (
+                  <>
+                    <span style={{ color: "var(--vd-ink)" }}>{tally.successes}</span>
+                    <span style={{ opacity: 0.5 }}>–</span>
+                    <span style={{ color: tally.fails > 0 ? "var(--vd-red-ink)" : "inherit" }}>
+                      {tally.fails}
+                    </span>
+                  </>
+                ) : (
+                  size
+                )}
               </div>
               {doubleFail.includes(i) && (
                 <span style={{ position: "absolute", top: 4, right: 4, width: 5, height: 5, background: "var(--vd-red)" }} />
@@ -139,6 +164,12 @@ export type ChronicleEntry = {
   outcome?: { label: string; detail?: string; held?: boolean };
   /** Named sides of a vote. The unveil is a moment; this is the record. */
   sides?: { for: string[]; against: string[] };
+  /**
+   * How a quest actually came back. The unveil shows this once and closes; the
+   * table then spends the next round arguing about what the count was, so the
+   * ledger keeps it.
+   */
+  tally?: { successes: number; fails: number; size: number; failsNeeded: number };
 };
 
 export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
@@ -161,6 +192,22 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
                   <dt>Against</dt>
                   <dd>{e.sides.against.length ? e.sides.against.join(", ") : "no one"}</dd>
                 </dl>
+              )}
+              {e.tally && (
+                <div className="vd-chron__tally">
+                  <span className="vd-chron__tally-part">
+                    <b>{e.tally.successes}</b> success{e.tally.successes === 1 ? "" : "es"}
+                  </span>
+                  <span
+                    className={`vd-chron__tally-part ${e.tally.fails > 0 ? "is-fail" : ""}`}
+                  >
+                    <b>{e.tally.fails}</b> fail{e.tally.fails === 1 ? "" : "s"}
+                  </span>
+                  <span className="vd-chron__tally-of">
+                    of {e.tally.size}
+                    {e.tally.failsNeeded > 1 ? ` · needed ${e.tally.failsNeeded}` : ""}
+                  </span>
+                </div>
               )}
               {e.outcome && (
                 <div className={`vd-chron__outcome ${e.outcome.held ? "vd-chron__outcome--held" : ""}`}>

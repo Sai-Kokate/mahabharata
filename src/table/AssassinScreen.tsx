@@ -51,6 +51,7 @@ export function AssassinScreen({
           questIndex={room.questIndex}
           results={room.questResults}
           doubleFail={doubleFailQuests(n)}
+          log={room.questLog ?? []}
         />
       </div>
 

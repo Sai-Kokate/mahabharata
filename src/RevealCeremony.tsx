@@ -42,10 +42,56 @@ function shuffle<T>(arr: T[]): T[] {
 
 const ROMAN = ["I", "II", "III", "IV", "V"];
 
-function seenKey(kind: string, id: string) {
-  return `decevia.unveil.${kind}.${id}`;
+/**
+ * A reveal already shown in THIS tab, so a reconnect does not replay it.
+ * Wrapped because Safari in private mode throws on both get and set — an
+ * uncaught throw in the queueing effect took the whole ceremony down, which is
+ * one of the ways players ended up never seeing a vote at all.
+ */
+function alreadySeen(key: string): boolean {
+  try {
+    return sessionStorage.getItem(`decevia.unveil.${key}`) != null;
+  } catch {
+    return false;
+  }
 }
 
+function markSeen(key: string) {
+  try {
+    sessionStorage.setItem(`decevia.unveil.${key}`, "1");
+  } catch {
+    /* storage blocked — dedupe falls back to the in-memory ref below */
+  }
+}
+
+type Reveal =
+  | { key: string; kind: "vote"; vote: LastVote }
+  | { key: string; kind: "quest"; quest: LastQuest };
+
+function voteKey(code: string, v: LastVote) {
+  return `${code}:v:${v.roundId}:${v.approvers.length}:${v.rejecters.length}:${v.approved ? "y" : "n"}:${v.overturnedBy ?? ""}`;
+}
+
+function questKey(code: string, q: LastQuest) {
+  return `${code}:q:${q.questIndex}:${q.fails}:${q.success}:${q.size}:${(q.revealed ?? []).length}`;
+}
+
+/**
+ * The unveils are a QUEUE, not a slot.
+ *
+ * They used to be one `mode` written by two effects. Both effects run on every
+ * mount, in declaration order, and React batches them — so whenever the room
+ * carried a `lastVote` AND a `lastQuest` (true from the first completed quest
+ * onward), the quest effect's `setVote(null)` landed on top and the vote unveil
+ * was destroyed before it ever painted. Any player whose component remounted —
+ * a phone dropping off wifi, a reload, a Convex reconnect blanking `room` for a
+ * frame — silently lost the approve/reject screen for that round, and because
+ * the key had already been written to sessionStorage it never came back. That
+ * is why only some of the table saw the vote.
+ *
+ * Queueing fixes both halves: a reveal that arrives while another is on screen
+ * waits its turn instead of overwriting it, and nothing is ever dropped.
+ */
 export function RevealCeremony({
   code,
   lastVote,
@@ -55,85 +101,97 @@ export function RevealCeremony({
   lastVote: LastVote | null;
   lastQuest: LastQuest | null;
 }) {
-  const [mode, setMode] = useState<"vote" | "quest" | null>(null);
+  const [queue, setQueue] = useState<Reveal[]>([]);
   /**
    * The outcome is red or brass, and the plate wears it — so it cannot wear it
    * from the first frame. Eight players watched the border turn red while the
    * cards were still face down, which gave the quest away every time. The
-   * unveils flip this on once they have actually shown the result.
+   * unveils flip this on once they have actually shown the result. Held by KEY
+   * so it cannot leak from one reveal to the next one in the queue.
    */
-  const [settled, setSettled] = useState(false);
-  const [vote, setVote] = useState<LastVote | null>(null);
-  const [quest, setQuest] = useState<LastQuest | null>(null);
-  const lastVoteRef = useRef<string>("");
-  const lastQuestRef = useRef<string>("");
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  /** Keys queued this mount. Guards the effects, which re-run on every render. */
+  const queued = useRef<Set<string>>(new Set());
+
+  const push = (item: Reveal) => {
+    if (queued.current.has(item.key)) return;
+    queued.current.add(item.key);
+    if (alreadySeen(item.key)) return;
+    markSeen(item.key);
+    setQueue((q) => [...q, item]);
+  };
 
   useEffect(() => {
     if (!lastVote) return;
-    const id = `${code}:v:${lastVote.roundId}:${lastVote.approvers.length}:${lastVote.rejecters.length}:${lastVote.approved ? "y" : "n"}:${lastVote.overturnedBy ?? ""}`;
-    if (id === lastVoteRef.current) return;
-    lastVoteRef.current = id;
-    if (sessionStorage.getItem(seenKey("vote", id))) return;
-    sessionStorage.setItem(seenKey("vote", id), "1");
-    setVote(lastVote);
-    setQuest(null);
-    setSettled(false);
-    setMode("vote");
+    push({ key: voteKey(code, lastVote), kind: "vote", vote: lastVote });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, lastVote]);
 
   useEffect(() => {
     if (!lastQuest) return;
-    const id = `${code}:q:${lastQuest.questIndex}:${lastQuest.fails}:${lastQuest.success}:${lastQuest.size}:${(lastQuest.revealed ?? []).length}`;
-    if (id === lastQuestRef.current) return;
-    lastQuestRef.current = id;
-    if (sessionStorage.getItem(seenKey("quest", id))) return;
-    sessionStorage.setItem(seenKey("quest", id), "1");
-    setQuest(lastQuest);
-    setVote(null);
-    setSettled(false);
-    setMode("quest");
+    push({ key: questKey(code, lastQuest), kind: "quest", quest: lastQuest });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, lastQuest]);
 
-  if (!mode) return null;
+  const current = queue[0] ?? null;
+  const dismiss = () => setQueue((q) => q.slice(1));
+
+  // Escape dismisses — a deliberate key press, unlike the timer that used to
+  // close this on its own.
+  useEffect(() => {
+    if (!current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current]);
+
+  if (!current) return null;
+
+  const settled = settledKey === current.key;
+  const waiting = queue.length - 1;
 
   // A rejected party or a fallen quest turns the plate's rules and studs red.
   const fallen =
-    mode === "vote"
-      ? vote != null && (!vote.approved || vote.overturnedBy != null)
-      : quest != null && !quest.success;
+    current.kind === "vote"
+      ? !current.vote.approved || current.vote.overturnedBy != null
+      : !current.quest.success;
 
   return (
     <div
       className="vd-overlay vd-overlay--unveil"
-      onClick={() => setMode(null)}
       role="dialog"
       aria-modal="true"
     >
-      <div
-        className={`vd-plate vd-studded ${fallen && settled ? "vd-plate--danger" : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className={`vd-plate vd-studded ${fallen && settled ? "vd-plate--danger" : ""}`}>
         <span className="vd-stud-b" aria-hidden />
-        {mode === "vote" && vote && (
+        {current.kind === "vote" ? (
           <VoteUnveil
-            vote={vote}
-            onSettled={() => setSettled(true)}
-            onDone={() => setMode(null)}
+            key={current.key}
+            vote={current.vote}
+            onSettled={() => setSettledKey(current.key)}
           />
-        )}
-        {mode === "quest" && quest && (
+        ) : (
           <QuestUnveil
-            quest={quest}
-            onSettled={() => setSettled(true)}
-            onDone={() => setMode(null)}
+            key={current.key}
+            quest={current.quest}
+            onSettled={() => setSettledKey(current.key)}
           />
         )}
+        {/*
+          The only way out. This used to close itself off the end of the GSAP
+          timeline, about a second and a half after the stamp landed — long
+          enough to miss if you had looked away, and the reason the table kept
+          asking what the count had been.
+        */}
         <button
           type="button"
           className="vd-btn vd-btn--primary vd-unveil__skip"
-          onClick={() => setMode(null)}
+          onClick={dismiss}
+          autoFocus
         >
-          <span>Continue</span>
+          <span>Continue{waiting > 0 ? ` · ${waiting} more to see` : ""}</span>
         </button>
       </div>
     </div>
@@ -141,13 +199,11 @@ export function RevealCeremony({
 }
 
 function VoteUnveil({
-  vote, onSettled, onDone,
-}: { vote: LastVote; onSettled: () => void; onDone: () => void }) {
+  vote, onSettled,
+}: { vote: LastVote; onSettled: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const yes = vote.approvers.length;
   const no = vote.rejecters.length;
-  const done = useRef(onDone);
-  done.current = onDone;
   const settled = useRef(onSettled);
   settled.current = onSettled;
 
@@ -163,9 +219,8 @@ function VoteUnveil({
           "-=0.1",
         )
         .add(() => settled.current())
-        .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.15")
-        .to({}, { duration: 1.4 })
-        .add(() => done.current());
+        .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.15");
+      // Timeline ends on the stamp. It does NOT close the plate — the player does.
     }, root);
     return () => ctx.revert();
   }, []);
@@ -218,8 +273,8 @@ function VoteUnveil({
 }
 
 function QuestUnveil({
-  quest, onSettled, onDone,
-}: { quest: LastQuest; onSettled: () => void; onDone: () => void }) {
+  quest, onSettled,
+}: { quest: LastQuest; onSettled: () => void }) {
   const root = useRef<HTMLDivElement>(null);
   const cards = useMemo(() => {
     const deck: Array<"success" | "fail"> = [
@@ -229,8 +284,6 @@ function QuestUnveil({
     return shuffle(deck);
   }, [quest.fails, quest.size]);
 
-  const done = useRef(onDone);
-  done.current = onDone;
   const settled = useRef(onSettled);
   settled.current = onSettled;
 
@@ -258,9 +311,8 @@ function QuestUnveil({
         )
         // Every card is face up by here — only now may the plate say how it went.
         .add(() => settled.current())
-        .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.1")
-        .to({}, { duration: 1.5 })
-        .add(() => done.current());
+        .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.1");
+      // Timeline ends on the stamp. It does NOT close the plate — the player does.
     }, root);
     return () => ctx.revert();
   }, []);

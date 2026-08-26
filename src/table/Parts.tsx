@@ -35,6 +35,7 @@ export function QuestColumn({ room }: { room: Room }) {
         questIndex={room.questIndex}
         results={room.questResults}
         doubleFail={doubleFail}
+        log={room.questLog ?? []}
       />
 
       <RejectionTrack used={room.rejectCount} max={room.maxRejects} />
@@ -53,11 +54,21 @@ export function ChronicleColumn({ room }: { room: Room }) {
     const out: ChronicleEntry[] = [];
     room.questResults.forEach((r, i) => {
       if (!r) return;
+      // The count for this quest, if it was ridden since the log was added.
+      // `?? []` guards the window where the client is live but the Convex
+      // functions carrying `questLog` have not been deployed yet.
+      const q = (room.questLog ?? []).find((x) => x.questIndex === i);
       out.push({
         n: i + 1,
         text: `Quest ${ROMAN[i]} rode out and came back ${r === "success" ? "whole" : "broken"}.`,
+        // How many of each card came back, which is what the table argues over
+        // afterwards. `questResults` only ever said held or fell.
+        tally: q
+          ? { successes: q.successes, fails: q.fails, size: q.size, failsNeeded: q.failsNeeded }
+          : undefined,
         outcome: {
           label: r === "success" ? "Held" : "Failed",
+          detail: q ? `${q.successes}–${q.fails}` : undefined,
           held: r === "success",
         },
       });
@@ -87,7 +98,7 @@ export function ChronicleColumn({ room }: { room: Room }) {
       out.push({ n: 1, text: "Nothing has happened yet. The first party has still to be named." });
     }
     return out;
-  }, [room.questResults, room.lastVote, room.players]);
+  }, [room.questResults, room.questLog, room.lastVote, room.players]);
 
   return <Chronicle entries={entries} />;
 }

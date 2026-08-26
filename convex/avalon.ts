@@ -445,9 +445,27 @@ async function finishQuest(ctx: MutationCtx, roomId: Id<"rooms">) {
     revealed: revealed.length > 0 ? revealed : undefined,
   };
 
+  /**
+   * The permanent record. `lastQuest` is overwritten by the next quest and
+   * `questResults` only remembers held/fell, so without this the table loses
+   * the count the moment the unveil closes. Appended once, here, which is the
+   * single place a quest is ever tallied.
+   */
+  const questLog = [
+    ...(room.questLog ?? []).filter((q) => q.questIndex !== room.questIndex),
+    {
+      questIndex: room.questIndex,
+      size: room.proposedTeam.length,
+      successes: Math.max(0, room.proposedTeam.length - fails),
+      fails,
+      success,
+      failsNeeded: failsNeeded(n, room.questIndex),
+    },
+  ].sort((a, b) => a.questIndex - b.questIndex);
+
   if (failures >= 3) {
     await ctx.db.patch(roomId, {
-      phase: "end", winner: "evil", questResults: results, lastQuest,
+      phase: "end", winner: "evil", questResults: results, lastQuest, questLog,
       winReason: themeOf(room).winReasons.threeFails,
       phaseEndsAt: undefined,
     });
@@ -455,7 +473,7 @@ async function finishQuest(ctx: MutationCtx, roomId: Id<"rooms">) {
   }
   if (successes >= 3) {
     await ctx.db.patch(roomId, {
-      phase: "assassin", questResults: results, lastQuest, phaseEndsAt: undefined,
+      phase: "assassin", questResults: results, lastQuest, questLog, phaseEndsAt: undefined,
     });
     return;
   }
@@ -463,6 +481,7 @@ async function finishQuest(ctx: MutationCtx, roomId: Id<"rooms">) {
   const nextRoundPatch: RoomPatch = {
     questResults: results,
     lastQuest,
+    questLog,
     leaderIndex: (room.leaderIndex + 1) % n,
     roundId: room.roundId + 1,
     rejectCount: 0,
@@ -996,7 +1015,7 @@ export const startGame = mutation({
       questResults: [null, null, null, null, null],
       rejectCount: 0,
       proposedTeam: [],
-      lastVote: undefined, lastQuest: undefined,
+      lastVote: undefined, lastQuest: undefined, questLog: [],
       winner: undefined, winReason: undefined,
       assassinGuess: undefined, assassinGuess2: undefined, assassinMode: undefined,
       phaseEndsAt: undefined, discussEndsAt: undefined, selectEndsAt: undefined,
@@ -1712,7 +1731,7 @@ export const newGame = mutation({
     await ctx.db.patch(room._id, {
       phase: "lobby", leaderIndex: 0, roundId: 0, questIndex: 0,
       questResults: [null, null, null, null, null], rejectCount: 0, proposedTeam: [],
-      lastVote: undefined, lastQuest: undefined,
+      lastVote: undefined, lastQuest: undefined, questLog: [],
       winner: undefined, winReason: undefined,
       assassinGuess: undefined, assassinGuess2: undefined, assassinMode: undefined,
       discussEndsAt: undefined, selectEndsAt: undefined, phaseEndsAt: undefined,
@@ -1817,6 +1836,8 @@ export const getRoom = query({
       roundId: room.roundId,
       questIndex: room.questIndex,
       questResults: room.questResults,
+      /** Per-quest success/fail counts for every quest already ridden. */
+      questLog: room.questLog ?? [],
       rejectCount: room.rejectCount,
       maxRejects: MAX_REJECTS,
       proposedTeam: room.proposedTeam,
