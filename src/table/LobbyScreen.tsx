@@ -286,7 +286,7 @@ export function LobbyScreen({
                   label="Remove"
                   ariaLabel={`Remove ${p.name}`}
                   ask={`Remove ${p.name}? They can rejoin with the same code.`}
-                  onConfirm={async () => onRemovePlayer(p.playerId)}
+                  onConfirm={act(() => onRemovePlayer(p.playerId)) as () => Promise<unknown>}
                 />
               )}
             </div>
@@ -399,7 +399,7 @@ export function LobbyScreen({
                           label="Remove"
                           ariaLabel={`Remove ${w.name}`}
                           ask={`Remove ${w.name}? They can rejoin with the same code.`}
-                          onConfirm={async () => onRemovePlayer(w.playerId)}
+                          onConfirm={act(() => onRemovePlayer(w.playerId)) as () => Promise<unknown>}
                         />
                       </>
                     )}
