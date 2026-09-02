@@ -51,68 +51,80 @@ exception (see "Out of scope").
 
 ## Part A — New shared Verdict components
 
-All added to `src/seal.css`, using existing `--vd-*` tokens only. Each is
-generic enough to serve more than one of the three target pages, which is the
-point: build the pattern once, reuse it three times.
+Added to `src/seal.css`, using existing `--vd-*` tokens only. A close read of
+the existing system (below) found that most of what the three pages need
+already exists as a generic primitive — the honest inventory is a short list
+of genuinely new pieces, plus reuse of what's there. This is a better outcome
+than it first looked: less new surface area, more consistency, because it's
+the same handful of primitives the game table already runs on.
+
+**Reused as-is (no new CSS):**
+- **Tabs.** `.vd-seg` (the Convene/Join and Sign in/Create-account control)
+  is already a generic flex row with N children and an `.is-active` state —
+  it works for Admin's 4-way section switcher unchanged. Only the JSX needs
+  `role="tablist"` / `role="tab"` / `aria-selected`, which `.vd-seg`'s markup
+  doesn't currently carry anywhere it's used.
+- **Stat tiles.** The Lobby's "At the table" tile
+  (`vd-studded vd-panel vd-panel--strong` + `vd-label` + `vd-numeral`) is
+  already exactly the flat-bordered-tile-with-a-big-number pattern Admin's
+  overview needs. Reused directly; see the one new wrapper (`.vd-stats`)
+  below for laying several out in a row.
+- **Choice cards.** `.vd-world` / `.vd-opt` (bordered card, `is-on` state:
+  brass border + tinted fill) is already "pick one of a few options," which
+  is exactly Upgrade's monthly/yearly plan picker. Reused directly.
+
+**Genuinely new, because nothing in the system does this yet:**
 
 ### `.vd-page`
 
 The header block already used ad hoc on the gate and sign-in pages, formalized
-as one reusable pattern: back-link (`vd-pill` with `ArrowLeft`), `vd-label`
-kicker, Cinzel `h1`, `vd-voice` lede paragraph. Replaces `rules-hero` /
+as one reusable layout: a back-link row, then a stack of `vd-label` kicker +
+Cinzel `h1` + `vd-voice` lede — all existing text primitives, just given a
+shared container (max-width, padding, bottom rule). Replaces `rules-hero` /
 `rules-kicker` / `rules-lede` / `rules-back`.
 
 ### `.vd-toc`
 
-A jump-nav: a row of anchor links to a page's own section `id`s. Sticky in a
-left rail on desktop (≥1024px, alongside the content column); a horizontally
-scrolling pill row on mobile, matching the theme-row/world-row scroll pattern
-already used elsewhere. This directly fixes Rules having ten section anchors
-(`#how-it-plays`, `#winning`, `#table-size`, `#beyond-ten`, `#sight`,
-`#night`, `#lancelot`, `#expansions`, `#roles`, `#themes`) that nothing
-currently links to.
+A jump-nav: a wrapping row of `.vd-pill` links to a page's own section `id`s
+(the existing topbar pill style, reused — no new pill CSS). This directly
+fixes Rules having ten section anchors (`#how-it-plays`, `#winning`,
+`#table-size`, `#beyond-ten`, `#sight`, `#night`, `#lancelot`, `#expansions`,
+`#roles`, `#themes`) that nothing currently links to. One column, wraps on
+mobile — no sticky sidebar; `/learn`'s own jump-nav (`.lx-jump`) already
+proves a simple wrapping row is enough for this app's page lengths.
 
-### `.vd-tabs`
+### `.vd-stats`
 
-A real tablist: `role="tablist"` / `role="tab"` / `aria-selected`, visually
-the segmented-control look already used for Convene/Join and Sign
-in/Create account (`.vd-seg`), generalized to N items instead of 2. Replaces
-Admin's repurposed `rules-theme-btn` pill row, which has no tab semantics
-today.
+The grid wrapper that lays multiple `vd-panel--strong` stat tiles (see reuse
+note above) out in a row: `repeat(auto-fit, minmax(120px, 1fr))`. Used for
+Admin's overview strip, replacing `admin-tiles`.
 
-### `.vd-stat`
-
-A flat bordered tile — Cinzel numeral (matching the clock's numeral
-treatment), Manrope label underneath, `--vd-rule-container` border, no
-shadow. Replaces `admin-tile`. Used for Admin's overview strip.
-
-### `.vd-choice-card`
-
-A selectable 2-up card: generalizes the world-picker's interaction
-(`.vd-world`: bordered card, `is-on` state shows a brass border + check) into
-a reusable pattern for "pick one of a few options with a visible price/detail
-line." Used for Upgrade's monthly/yearly plan picker, replacing
-`billing-plan`.
-
-### `.vd-table`
+### `.vd-rowlist`
 
 A bordered row-list generalizing the existing `rules-map` head/row idea into
-Verdict's language — `--vd-rule-structure` dividers, Manrope uppercase column
-labels, no zebra striping (flat). Used for Admin's orders/subscriptions/users
-lists and Upgrade's order history, replacing `rules-map`/`admin-order`.
+Verdict's language — `--vd-rule-structure` dividers between rows, Manrope
+uppercase column labels in the head, no zebra striping (flat). Column-count
+modifiers (`--3col`, `--4col`) set `grid-template-columns` per usage. Used for
+Admin's orders/subscriptions/users lists and Upgrade's order history,
+replacing `rules-map`/`admin-order`.
 
-### Status badges
+(Named `.vd-rowlist`, not `.vd-table` — `.vd-table` already exists in
+`seal.css` for the three-column game-board layout; reusing the name would
+collide.)
 
-Reuse the state vocabulary the design doc already defines rather than invent
-a new "success" color:
+### Status pills
 
-| Meaning | Treatment |
-|---|---|
-| pending / in progress | brass outline pill (echoes the "voted" seat state: brass border, idle face) |
-| approved / live / active | filled parchment pill (echoes "named/riding": parchment fill) |
-| rejected / revoked / cancelled | red outline pill (the existing `--vd-red` — used for exactly this: rejection) |
+Two new modifiers on the existing `.vd-pill`, extending the vocabulary it
+already has (`.vd-pill--brass` exists today, used for "Premium"):
 
-No new hue is introduced. Replaces `billing-badge`.
+| Meaning | Class | Treatment |
+|---|---|---|
+| pending / in progress | `.vd-pill--brass` (existing) | brass outline |
+| approved / live / active | `.vd-pill--parchment` (new) | filled parchment |
+| rejected / revoked / cancelled | `.vd-pill--danger` (new) | red outline |
+
+No new hue is introduced — parchment and red already exist as tokens.
+Replaces `billing-badge`.
 
 ---
 
@@ -125,7 +137,7 @@ No new hue is introduced. Replaces `billing-badge`.
 - `rules-flow` steps, `rules-callouts`, `rules-win` cards, `rules-quests`
   gems, `rules-sight` rows, `rules-role` cards, and the theme-mapper table all
   move onto Verdict panels (`vd-panel`, `vd-studded` where a plate reads as
-  "act on this," flat bordered `vd-table` rows for the mapper) — same
+  "act on this," flat bordered `vd-rowlist` rows for the mapper) — same
   information, same layout shape, restyled.
 - The two "back" links at the top (`← How to play`, `← Back to council`)
   become a single `vd-page` back-link row instead of two ad hoc anchors with
@@ -134,16 +146,16 @@ No new hue is introduced. Replaces `billing-badge`.
 ### Upgrade (`UpgradePage.tsx`)
 
 - `.vd-page` header.
-- Status card (free/premium/pending) as a `vd-studded` plate using the badge
-  vocabulary above.
-- Seat/plan picker as `.vd-choice-card`s.
+- Status card (free/premium/pending) as a `vd-studded` plate using the status
+  pill vocabulary above.
+- Seat/plan picker reuses `.vd-world`/`.vd-opt` choice cards.
 - QR payment block stays on a **white** card — the one deliberate exception,
   because a UPI scanner needs real black-on-white contrast; everything around
   it (the explanatory copy, the reference-number field) is Verdict.
 - Member-email fields as `vd-field` grids; the buyer's own seat is visibly
   fixed/non-editable text, not a field, so "which of these is required" stops
   being ambiguous.
-- Order history as `.vd-table`.
+- Order history as `.vd-rowlist`.
 - Submit/save buttons get `vd-btn--primary` + the `vd-spin` loading treatment
   already used in Sign in, replacing the ad hoc `btn-gold-hover billing-btn`
   mix.
@@ -151,9 +163,11 @@ No new hue is introduced. Replaces `billing-badge`.
 ### Admin (`AdminPage.tsx`)
 
 - `.vd-page` header.
-- Overview strip as `.vd-stat` tiles.
-- Section switcher (orders/subs/users/grant) as real `.vd-tabs`.
-- All three lists as `.vd-table`.
+- Overview strip as `.vd-stats` (reusing the Lobby's `vd-panel--strong`
+  stat-tile pattern).
+- Section switcher (orders/subs/users/grant) as `.vd-seg` with proper tab
+  ARIA (`role="tablist"` / `role="tab"` / `aria-selected`).
+- All three lists as `.vd-rowlist`.
 - Destructive actions unified on the app's own two-tap `Confirm` component
   (already built in `TableShell.tsx` for Restart/New council/Close council)
   instead of the current mix of a native `window.confirm()` (Delete
@@ -198,12 +212,21 @@ observed behavior.
    keyboard-activated button fires `click`, not synthetic pointer events, so
    a non-pointer user can never see their own role. Fix: add matching
    `onKeyDown`/`onKeyUp` handlers for Enter/Space.
-6. **The shared `Plate` overlay claims `aria-modal` but has no focus trap or
-   Escape handling.** `RevealCeremony.tsx` already implements both (Escape
-   listener, `autoFocus` on its action button); `Plate` in `TableParts.tsx`
-   — reused by King Returns, Excalibur, and quest-result overlays — has
-   neither. Fix: move that logic down into `Plate` so every overlay built on
-   it inherits it.
+6. **The shared `Plate` overlay claims `aria-modal` but never moves focus
+   into it or traps Tab inside it.** `Plate` in `TableParts.tsx` — reused by
+   King Returns, Excalibur, and quest-result overlays — renders
+   `role="dialog" aria-modal="true"` and stops there: a keyboard/screen-reader
+   user's focus stays wherever it was on the page behind the overlay, and Tab
+   can leave the dialog entirely. Fix: on mount, move focus to the plate's
+   first focusable element, and trap Tab within it (the standard WAI-ARIA
+   modal-dialog pattern) — generic to `Plate` itself, so every overlay built
+   on it inherits it. **Not** adding Escape-to-dismiss here: unlike
+   `RevealCeremony` (a dismissable announcement, where Escape already exists
+   and is correct), several `Plate` screens represent a forced, non-skippable
+   game decision — Excalibur's flip, King Returns' overturn/stand-down. There
+   is no single safe "cancel" action to bind Escape to across all of them, so
+   adding it risks letting a player escape past a decision the game requires
+   them to make.
 
 ### Medium priority
 
@@ -218,8 +241,14 @@ observed behavior.
    differentiate them (grouping, icon, or a short inline description) rather
    than relying on label text alone under time pressure.
 10. **Night phase's "Begin" has no readiness signal**, unlike Vote and Quest,
-    which both show "X of Y have acted." Fix: track a per-player "has held
-    their card" flag and surface the same count.
+    which both show "X of Y have acted." A true "X of Y have read their card"
+    count would need a new server field and mutation (every other progress
+    count in the app — `voteProgress`, `questProgress` — is server-computed
+    from a real submission), which is backend work this pass doesn't include
+    (see Non-goals). Fix, scoped to frontend only: add a static reminder line
+    next to the host's Begin button ("Make sure everyone has held their card
+    before beginning — there's no way to replay this screen for someone who
+    missed it") so the expectation is set even without a live count.
 11. **The `/learn` walkthrough's per-beat animations ignore
     `prefers-reduced-motion`**, even though the landing page and `/learn`'s
     own page-load animation both check it. This is the one *repeating*
@@ -254,7 +283,7 @@ No backend changes, so no Convex-side testing. For the frontend:
   original Council Seal handoff used.
 - Manual pass on the six friction fixes that are interaction-visible
   (join-tab default, world picker on join, lobby remove-confirm, keyboard
-  role-reveal, Plate Escape/focus, Enter-to-submit on the gate) — these are
+  role-reveal, Plate focus trap, Enter-to-submit on the gate) — these are
   UI behavior, not something a type-check catches.
 - `prefers-reduced-motion` checked via the OS/DevTools emulation for the
   `/learn` fix.
