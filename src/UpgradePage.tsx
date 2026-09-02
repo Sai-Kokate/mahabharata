@@ -234,7 +234,7 @@ export default function UpgradePage() {
               </div>
             </div>
             <button
-              className="vd-pill"
+              className="vd-pill vd-pill--action"
               style={{ marginTop: 12 }}
               disabled={busy}
               onClick={() =>

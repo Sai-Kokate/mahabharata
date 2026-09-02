@@ -255,12 +255,23 @@ export function Plate({
       Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
         (n) => !n.hasAttribute("disabled"),
       );
-    (items()[0] ?? el).focus();
+    // Focus the plate itself, not its first focusable descendant. `children`
+    // render before `action`, so "first focusable" is often the riskiest
+    // option on screen — Excalibur's "Flip", King Returns' "Overturn" — not
+    // the safe default. `el` (tabIndex={-1} below) is a neutral landing spot
+    // a screen reader still announces via aria-label.
+    el.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
       const focusable = items();
-      if (focusable.length === 0) return;
+      if (focusable.length === 0) {
+        // Nothing inside to cycle to — hold focus here rather than letting
+        // Tab reach the board behind the overlay, which is not inert.
+        e.preventDefault();
+        el.focus();
+        return;
+      }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (e.shiftKey && document.activeElement === first) {

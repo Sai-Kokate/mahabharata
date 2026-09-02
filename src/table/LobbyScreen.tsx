@@ -12,7 +12,7 @@
    host's plan.
    ========================================================================== */
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   Check, Copy, Crown, Flame, Lock, Sparkles, Sun, Swords, Users, X,
 } from "lucide-react";
@@ -153,29 +153,35 @@ export function LobbyScreen({
             const lock = locked(o.key);
             const full = !on && !fits(o);
             return (
-              <button
-                key={o.key}
-                className={`vd-opt vd-opt--${o.side} ${on ? "is-on" : ""}`}
-                disabled={!isHost || lock || full}
-                title={lock ? "Premium — upgrade to unlock" : full ? "No seat left on that side" : o.desc(rn)}
-                onClick={act(() => toggle(o.key))}
-              >
-                <span className="vd-opt__top">
-                  {o.side === "good"
-                    ? <Sun size={12} color="var(--vd-brass)" />
-                    : <Flame size={12} color="var(--vd-red-ink)" />}
-                  <span className="vd-opt__name">{o.label(rn)}</span>
-                  {lock ? <span className="vd-opt__lock"><Lock size={10} /> paid</span>
-                    : on ? <Check size={13} color="var(--vd-brass)" /> : null}
-                </span>
-                {/* The blocking reason used to live only in `title`, invisible
-                    on touch — this app's primary surface. It now replaces the
-                    ability text whenever the option is actually blocked, so a
-                    tap reveals the same thing a hover would. */}
-                <span className="vd-opt__desc">
-                  {lock ? "Premium — upgrade to unlock" : full ? "No seat left on that side" : o.desc(rn)}
-                </span>
-              </button>
+              <Fragment key={o.key}>
+                <button
+                  className={`vd-opt vd-opt--${o.side} ${on ? "is-on" : ""}`}
+                  disabled={!isHost || lock || full}
+                  title={lock ? "Premium — upgrade to unlock" : full ? "No seat left on that side" : o.desc(rn)}
+                  onClick={act(() => toggle(o.key))}
+                >
+                  <span className="vd-opt__top">
+                    {o.side === "good"
+                      ? <Sun size={12} color="var(--vd-brass)" />
+                      : <Flame size={12} color="var(--vd-red-ink)" />}
+                    <span className="vd-opt__name">{o.label(rn)}</span>
+                    {lock ? <span className="vd-opt__lock"><Lock size={10} /> paid</span>
+                      : on ? <Check size={13} color="var(--vd-brass)" /> : null}
+                  </span>
+                  <span className="vd-opt__desc">{o.desc(rn)}</span>
+                </button>
+                {(lock || full) && (
+                  // The blocking reason used to live only in `title`, invisible
+                  // on touch — this app's primary surface. It's a caption
+                  // OUTSIDE the disabled button (which sits at ~0.42 opacity,
+                  // making in-button text ~1.5:1 contrast and effectively
+                  // unreadable), and it no longer replaces the ability
+                  // description a free user could otherwise read.
+                  <p className="vd-voice" style={{ margin: "4px 0 0", fontSize: 12 }}>
+                    {lock ? "Premium — upgrade to unlock" : "No seat left on that side"}
+                  </p>
+                )}
+              </Fragment>
             );
           })}
         </div>

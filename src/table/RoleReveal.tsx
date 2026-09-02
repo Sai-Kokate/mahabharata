@@ -113,6 +113,7 @@ export function RoleReveal({
         onPointerCancel={end}
         onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
+        onBlur={end}
         onContextMenu={(e) => e.preventDefault()}
       >
         {held ? <Eye size={12} /> : <EyeOff size={12} />}

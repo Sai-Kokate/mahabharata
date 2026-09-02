@@ -279,7 +279,7 @@ function PhaseBanner({ room, pid }: { room: Room; pid: string }) {
 
 /** A destructive action that asks once. Two taps, no browser dialog. */
 export function Confirm({
-  label, icon, ask, onConfirm, danger, compact, ariaLabel, className,
+  label, icon, ask, onConfirm, danger, compact, ariaLabel, className, disabled,
 }: {
   label: string;
   icon: ReactNode;
@@ -290,6 +290,8 @@ export function Confirm({
   compact?: boolean;
   ariaLabel?: string;
   className?: string;
+  /** Disables the trigger only — once asking, Yes/No always stay enabled. */
+  disabled?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
 
@@ -299,6 +301,7 @@ export function Confirm({
         className={className ?? "vd-textbtn"}
         aria-label={ariaLabel}
         title={ariaLabel}
+        disabled={disabled}
         onClick={() => setAsking(true)}
       >
         {icon} {!compact && label}

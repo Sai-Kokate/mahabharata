@@ -45,13 +45,6 @@ textarea {
     background-color 0.25s ease;
 }
 
-input:focus,
-select:focus {
-  outline: none;
-  border-color: var(--theme-gold) !important;
-  box-shadow: 0 0 0 3px rgba(227, 169, 60, 0.2) !important;
-}
-
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

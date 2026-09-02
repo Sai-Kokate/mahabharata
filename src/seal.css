@@ -989,6 +989,11 @@
 .vd-pill:hover { color: var(--vd-ink); border-color: var(--vd-rule-strong); }
 .vd-pill--brass { border-color: var(--vd-brass); color: var(--vd-brass); }
 
+/* A pill that fires a mutation/action (Approve, Reject, Withdraw, a
+   player-count/theme picker) needs a real tap target, not the ~18px
+   navigational-pill height. */
+.vd-pill--action { min-width: 44px; min-height: 44px; padding: 4px 16px; }
+
 
 /* ============================================================================
    The gate (create / join) and the shared field control
@@ -1027,6 +1032,7 @@
   border: 1px solid var(--vd-rule-control); background: var(--vd-bg-raised);
   color: var(--vd-ink); font: 600 16px/1 var(--vd-ui); /* 16px avoids iOS zoom */
 }
+select.vd-field { appearance: none; border-radius: 0; }
 .vd-field:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: 2px; }
 .vd-field::placeholder { color: var(--vd-ink-dim); font-weight: 400; }
 .vd-field--code {

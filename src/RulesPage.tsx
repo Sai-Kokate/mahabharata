@@ -252,7 +252,7 @@ export default function RulesPage() {
                 <button
                   key={n}
                   type="button"
-                  className={`vd-pill ${n === players ? "is-on" : ""}`}
+                  className={`vd-pill vd-pill--action ${n === players ? "is-on" : ""}`}
                   onClick={() => setPlayers(n)}
                 >
                   {n}
@@ -474,7 +474,7 @@ export default function RulesPage() {
 
           <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 20 }}>
             <div className="vd-rowlist__head">
-              <span>Plot card</span><span /><span>What it does</span>
+              <span>Plot card</span><span>What it does</span><span />
             </div>
             {Object.values(PLOT_CARDS).map((c) => (
               <div key={c.id} className="vd-rowlist__row">
@@ -529,7 +529,7 @@ export default function RulesPage() {
               <button
                 key={t.id}
                 type="button"
-                className={`vd-pill ${t.id === themeId ? "is-on" : ""}`}
+                className={`vd-pill vd-pill--action ${t.id === themeId ? "is-on" : ""}`}
                 onClick={() => setThemeId(t.id)}
               >
                 {t.name}
@@ -541,7 +541,7 @@ export default function RulesPage() {
           </p>
           <div className="vd-rowlist vd-rowlist--3col">
             <div className="vd-rowlist__head">
-              <span>Medieval (rules)</span><span /><span>{theme.name}</span>
+              <span>Medieval (rules)</span><span>{theme.name}</span><span />
             </div>
             {roster.map(({ id, base, themed }) => (
               <div key={id} className="vd-rowlist__row">

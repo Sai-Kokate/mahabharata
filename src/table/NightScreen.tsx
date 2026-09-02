@@ -107,6 +107,7 @@ export function NightScreen({
                 onPointerCancel={end}
                 onKeyDown={onKeyDown}
                 onKeyUp={onKeyUp}
+                onBlur={end}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 {held ? <Eye size={13} /> : <EyeOff size={13} />}

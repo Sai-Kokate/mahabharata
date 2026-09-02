@@ -88,7 +88,7 @@ export default function AdminPage() {
               environment variable.
             </p>
           </header>
-          <button className="vd-pill" onClick={() => void signOut()}>
+          <button className="vd-pill vd-pill--action" onClick={() => void signOut()}>
             <LogOut size={11} /> Sign out
           </button>
         </div>
@@ -266,7 +266,7 @@ function Orders({
                   onChange={(e) => setNotes({ ...notes, [o._id]: e.target.value })}
                 />
                 <button
-                  className="vd-pill vd-pill--parchment"
+                  className="vd-pill vd-pill--parchment vd-pill--action"
                   disabled={busy}
                   onClick={() =>
                     void run(() => {
@@ -282,10 +282,12 @@ function Orders({
                   <Check size={12} /> Approve
                 </button>
                 <Confirm
-                  className="vd-pill vd-pill--danger"
+                  className="vd-pill vd-pill--danger vd-pill--action"
                   icon={<X size={12} />}
                   label="Reject"
                   ask={`Reject ${o.email}'s request?`}
+                  disabled={busy}
+                  danger
                   onConfirm={() =>
                     run(
                       () =>
@@ -390,7 +392,7 @@ function Subscriptions({
               />
               <div className="vd-row">
                 <button
-                  className="vd-pill"
+                  className="vd-pill vd-pill--action"
                   disabled={busy}
                   onClick={() =>
                     void run(
@@ -406,7 +408,7 @@ function Subscriptions({
                   <Check size={12} /> Save seats
                 </button>
                 <button
-                  className="vd-pill"
+                  className="vd-pill vd-pill--action"
                   disabled={busy}
                   onClick={() =>
                     void run(
@@ -424,10 +426,12 @@ function Subscriptions({
                 </button>
                 {s.status === "active" ? (
                   <Confirm
-                    className="vd-pill vd-pill--danger"
+                    className="vd-pill vd-pill--danger vd-pill--action"
                     icon={<Ban size={12} />}
                     label="Revoke"
                     ask={`Revoke ${s.ownerEmail}'s plan?`}
+                    disabled={busy}
+                    danger
                     onConfirm={() =>
                       run(
                         () => setStatus({ subscriptionId: s._id, status: "revoked" }),
@@ -437,7 +441,7 @@ function Subscriptions({
                   />
                 ) : (
                   <button
-                    className="vd-pill vd-pill--parchment"
+                    className="vd-pill vd-pill--parchment vd-pill--action"
                     disabled={busy}
                     onClick={() =>
                       void run(
@@ -450,10 +454,12 @@ function Subscriptions({
                   </button>
                 )}
                 <Confirm
-                  className="vd-pill vd-pill--danger"
+                  className="vd-pill vd-pill--danger vd-pill--action"
                   icon={<Trash2 size={12} />}
                   label="Delete"
                   ask={`Permanently delete ${s.ownerEmail}'s plan and all its seats?`}
+                  disabled={busy}
+                  danger
                   onConfirm={() =>
                     run(() => del({ subscriptionId: s._id }), "Subscription deleted.")
                   }
