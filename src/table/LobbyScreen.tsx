@@ -20,7 +20,7 @@ import {
   PREMIUM_OPT_KEYS, PREMIUM_OPT_LABELS, TEAM_COUNTS, validateSetup,
 } from "../../convex/logic";
 import { ChronicleColumn, SeatRing } from "./Parts";
-import { ActionLine } from "./TableShell";
+import { ActionLine, Confirm } from "./TableShell";
 import { type Room, type TableProps, ROMAN } from "./types";
 
 type Opts = Room["opts"];
@@ -168,7 +168,13 @@ export function LobbyScreen({
                   {lock ? <span className="vd-opt__lock"><Lock size={10} /> paid</span>
                     : on ? <Check size={13} color="var(--vd-brass)" /> : null}
                 </span>
-                <span className="vd-opt__desc">{o.desc(rn)}</span>
+                {/* The blocking reason used to live only in `title`, invisible
+                    on touch — this app's primary surface. It now replaces the
+                    ability text whenever the option is actually blocked, so a
+                    tap reveals the same thing a hover would. */}
+                <span className="vd-opt__desc">
+                  {lock ? "Premium — upgrade to unlock" : full ? "No seat left on that side" : o.desc(rn)}
+                </span>
               </button>
             );
           })}
@@ -273,14 +279,15 @@ export function LobbyScreen({
               {/* Frees the seat and the name together, so a ghost left by a
                   dead tab can walk back in under the same one. */}
               {isHost && p.playerId !== pid && (
-                <button
+                <Confirm
                   className="vd-tile__x"
-                  title={`Remove ${p.name} — they can rejoin with the same code`}
-                  aria-label={`Remove ${p.name}`}
-                  onClick={act(() => onRemovePlayer(p.playerId))}
-                >
-                  <X size={12} />
-                </button>
+                  compact
+                  icon={<X size={12} />}
+                  label="Remove"
+                  ariaLabel={`Remove ${p.name}`}
+                  ask={`Remove ${p.name}? They can rejoin with the same code.`}
+                  onConfirm={async () => onRemovePlayer(p.playerId)}
+                />
               )}
             </div>
           ))}
@@ -385,14 +392,15 @@ export function LobbyScreen({
                         >
                           Seat
                         </button>
-                        <button
+                        <Confirm
                           className="vd-tile__x"
-                          title={`Remove ${w.name} — they can rejoin with the same code`}
-                          aria-label={`Remove ${w.name}`}
-                          onClick={act(() => onRemovePlayer(w.playerId))}
-                        >
-                          <X size={12} />
-                        </button>
+                          compact
+                          icon={<X size={12} />}
+                          label="Remove"
+                          ariaLabel={`Remove ${w.name}`}
+                          ask={`Remove ${w.name}? They can rejoin with the same code.`}
+                          onConfirm={async () => onRemovePlayer(w.playerId)}
+                        />
                       </>
                     )}
                   </div>
