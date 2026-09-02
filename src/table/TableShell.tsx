@@ -95,12 +95,23 @@ export function TableShell({
             only on the reckoning screen, which meant a table that mis-set its
             roles had to finish the game it did not want to play. */}
         <div className="vd-shellbar">
+          {/* Restart keeps this room and its code; New council and Close both
+              end it (into a fresh one, or for good). A rule between them
+              groups by consequence, so the three no longer read as one
+              undifferentiated row under time pressure. */}
           {isHost && room.phase !== "lobby" && (
             <Confirm
               label="Restart"
               icon={<RotateCcw size={11} />}
               ask="Restart — everyone back to the lobby?"
               onConfirm={onRestart}
+            />
+          )}
+          {isHost && room.phase !== "lobby" && (
+            <span
+              className="vd-rule"
+              style={{ width: 1, height: 14, background: "var(--vd-rule-control)" }}
+              aria-hidden
             />
           )}
           {isHost && (
