@@ -88,6 +88,7 @@ export function Stage({ scenario }: { scenario: Scenario }) {
 function Caption({ beat }: { beat: Beat }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
       gsap.from(".lx-say", { y: 10, opacity: 0, duration: 0.4, ease: "power3.out" });
       gsap.from(".lx-note", { opacity: 0, duration: 0.4, delay: 0.15 });
@@ -106,9 +107,17 @@ function Caption({ beat }: { beat: Beat }) {
 function Cards({ cards }: { cards: Array<"back" | "success" | "fail"> }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
+    const faces = gsap.utils.toArray<HTMLElement>(".lx-card.is-up .lx-card__in");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Skip the animated entrance/flip, but an "is-up" card's rotateY is set
+      // entirely by this call (learn.css's own rotateY(180deg) is on the
+      // FRONT FACE, not this wrapper) — so it still needs setting, instantly,
+      // or the card stays stuck showing its back.
+      if (faces.length) gsap.set(faces, { rotateY: 180 });
+      return;
+    }
     const ctx = gsap.context(() => {
       gsap.from(".lx-card", { y: 18, opacity: 0, stagger: 0.07, duration: 0.35 });
-      const faces = gsap.utils.toArray<HTMLElement>(".lx-card.is-up .lx-card__in");
       if (faces.length) {
         gsap.fromTo(
           faces,

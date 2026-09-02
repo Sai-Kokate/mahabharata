@@ -70,6 +70,7 @@ export default function LearnPage() {
         </p>
         <div className="lx-jump">
           <a href="#watch"><Users size={12} /> Watch a round</a>
+          <a href="#table"><Swords size={12} /> How the table splits</a>
           <a href="#cast"><Moon size={12} /> The cast</a>
           <a href="#expansions"><Sparkles size={12} /> Expansions</a>
           <a href="#plots"><Zap size={12} /> Plot cards</a>
