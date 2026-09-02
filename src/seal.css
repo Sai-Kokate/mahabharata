@@ -1418,3 +1418,105 @@ body { background: var(--vd-bg); }
   font: 700 8.5px/1 var(--vd-ui); letter-spacing: 0.16em;
   text-transform: uppercase; color: var(--vd-ink-dim);
 }
+
+/* ============================================================================
+   Page shell — Rules / Upgrade / Admin.
+
+   A close read of the rest of this file found that most of what these three
+   pages need already exists as a generic primitive (.vd-seg for tabs,
+   .vd-panel--strong for stat tiles, .vd-world/.vd-opt for choice cards). What
+   follows is the short, honest list of pieces that pattern didn't cover.
+   ========================================================================== */
+
+.vd-page {
+  max-width: 820px;
+  margin-inline: auto;
+  padding: 40px 20px 64px;
+}
+@media (max-width: 720px) {
+  .vd-page { padding: 24px 16px 48px; }
+}
+.vd-page__back { margin-bottom: var(--vd-5); display: flex; gap: var(--vd-2); flex-wrap: wrap; }
+.vd-page__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-2);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--vd-rule-container);
+}
+
+/* Jump-nav: a wrapping row of the existing pill style — no new pill CSS. */
+.vd-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vd-2);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--vd-rule-container);
+}
+
+/* Every vd-page section after the first gets a top rule, echoing how the old
+   .rules-section did it. */
+.vd-page__section {
+  padding-top: 32px;
+  margin-top: 32px;
+  border-top: 1px solid var(--vd-rule-container);
+}
+.vd-page__section:first-of-type { padding-top: 0; margin-top: 0; border-top: 0; }
+
+/* Admin's overview strip: lay several vd-panel--strong stat tiles in a row —
+   the tile itself is the Lobby's "At the table" pattern, reused as-is. */
+.vd-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--vd-2);
+}
+
+/* Bordered row-list: orders/users history, order history. NOT named .vd-table
+   — that class already means the game board's 3-column layout (see "Table
+   body" above); reusing the name would collide. */
+.vd-rowlist { display: flex; flex-direction: column; }
+.vd-rowlist__head {
+  display: grid;
+  gap: var(--vd-3);
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--vd-rule-container);
+  font: 700 8px/1 var(--vd-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+.vd-rowlist__row {
+  display: grid;
+  gap: var(--vd-3);
+  align-items: center;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--vd-rule-structure);
+  font: 500 13px/1.4 var(--vd-ui);
+  color: var(--vd-ink);
+}
+.vd-rowlist__row:last-child { border-bottom: 0; }
+.vd-rowlist--3col > .vd-rowlist__head,
+.vd-rowlist--3col > .vd-rowlist__row { grid-template-columns: 1fr 1fr auto; }
+@media (max-width: 640px) {
+  .vd-rowlist--3col > .vd-rowlist__head,
+  .vd-rowlist--3col > .vd-rowlist__row { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+}
+
+/* Status pills: extends the existing .vd-pill vocabulary. .vd-pill--brass
+   already exists (used for "Premium") and doubles as "pending" here. */
+.vd-pill--parchment { background: var(--vd-parchment); border-color: var(--vd-brass-edge); color: #171410; }
+.vd-pill--danger { border-color: var(--vd-red-rule); color: var(--vd-red-ink); }
+/* A selected pill in a picker row (Rules' player-count / theme picker) —
+   mirrors .vd-seg's brass "is-active" fill. */
+.vd-pill.is-on { background: var(--vd-brass); border-color: var(--vd-brass); color: #171410; }
+
+/* The one deliberate exception to "no new visual language": a UPI QR code
+   needs real black-on-white contrast to scan. */
+.vd-qr-frame {
+  display: inline-flex;
+  background: #fff;
+  padding: 12px;
+  border: 2px solid var(--vd-brass);
+}

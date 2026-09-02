@@ -267,21 +267,30 @@ function PhaseBanner({ room, pid }: { room: Room; pid: string }) {
 }
 
 /** A destructive action that asks once. Two taps, no browser dialog. */
-function Confirm({
-  label, icon, ask, onConfirm, danger,
+export function Confirm({
+  label, icon, ask, onConfirm, danger, compact, ariaLabel, className,
 }: {
   label: string;
   icon: ReactNode;
   ask: string;
   onConfirm: () => Promise<unknown>;
   danger?: boolean;
+  /** Icon-only trigger (e.g. a roster row's remove control) instead of the text-button row. */
+  compact?: boolean;
+  ariaLabel?: string;
+  className?: string;
 }) {
   const [asking, setAsking] = useState(false);
 
   if (!asking) {
     return (
-      <button className="vd-textbtn" onClick={() => setAsking(true)}>
-        {icon} {label}
+      <button
+        className={className ?? "vd-textbtn"}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+        onClick={() => setAsking(true)}
+      >
+        {icon} {!compact && label}
       </button>
     );
   }
