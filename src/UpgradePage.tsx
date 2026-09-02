@@ -43,6 +43,7 @@ export default function UpgradePage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState<"ok" | "error">("ok");
   const [busy, setBusy] = useState(false);
   const [memberDraft, setMemberDraft] = useState<string[]>([]);
 
@@ -69,9 +70,10 @@ export default function UpgradePage() {
     setMsg("");
     try {
       await fn();
-      if (ok) setMsg(ok);
+      if (ok) { setMsg(ok); setMsgKind("ok"); }
     } catch (e: any) {
       setMsg(e?.message ?? "Something went wrong.");
+      setMsgKind("error");
     } finally {
       setBusy(false);
     }
@@ -389,7 +391,14 @@ export default function UpgradePage() {
           </>
         )}
 
-        {msg && <p className="vd-panel vd-panel--danger vd-errline" style={{ margin: "0 0 20px" }}>{msg}</p>}
+        {msg && (
+          <p
+            className={`vd-panel ${msgKind === "error" ? "vd-panel--danger vd-errline" : "vd-panel--strong"}`}
+            style={{ margin: "0 0 20px" }}
+          >
+            {msg}
+          </p>
+        )}
 
         {/* --------------------------- order history ------------------------ */}
         {(orders ?? []).length > 0 && (
