@@ -22,7 +22,7 @@ export function NightScreen({
 }: Pick<TableProps, "room" | "pid" | "theme" | "act"> & {
   onBegin: () => Promise<unknown>;
 }) {
-  const { held, start, end } = useHold();
+  const { held, start, end, onKeyDown, onKeyUp } = useHold();
   const me = room.me;
   const isHost = room.hostId === pid;
   const watching = room.seating.iAmWatching;
@@ -105,6 +105,8 @@ export function NightScreen({
                 onPointerDown={start}
                 onPointerUp={end}
                 onPointerCancel={end}
+                onKeyDown={onKeyDown}
+                onKeyUp={onKeyUp}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 {held ? <Eye size={13} /> : <EyeOff size={13} />}
