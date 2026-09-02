@@ -25,6 +25,7 @@ import {
   Timer,
   Lock,
   Shield,
+  BookOpen,
 } from "lucide-react";
 
 /* ============================ identity (per tab) ========================= */
@@ -103,6 +104,13 @@ export default function App() {
     const invite = (params.get("code") ?? "").trim().toUpperCase();
     if (invite.length === 4 && !sessionStorage.getItem("decevia.code")) {
       setCodeInput(invite);
+      setActiveTab("join");
+      return;
+    }
+    // The landing page's "Join the council" button has no code to prefill —
+    // it links here with ?tab=join so the gate opens on the tab that click
+    // actually meant, instead of defaulting to Convene.
+    if (params.get("tab") === "join" && !sessionStorage.getItem("decevia.code")) {
       setActiveTab("join");
     }
   }, []);
@@ -327,7 +335,7 @@ export default function App() {
       {code && room === undefined && (
         <div className="vd-board">
           <div className="vd-content vd-center">
-            <Loader2 size={26} className="billing-spin" color="var(--vd-brass)" />
+            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
           </div>
         </div>
       )}
@@ -409,6 +417,7 @@ export default function App() {
   /* ------------------------------- screens ------------------------------ */
   /** The gate. Same board language as the table: flat, brass, parchment. */
   function Home() {
+    const gateSubmit = wrap(activeTab === "create" ? createRoom : () => joinRoom());
     return (
       <div className="vd-board">
         <div className="vd-content vd-gate">
@@ -444,6 +453,7 @@ export default function App() {
               value={name}
               maxLength={16}
               onChange={(e) => { setName(e.target.value); setRejoinName(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") void gateSubmit(); }}
               placeholder="unique per warrior"
               autoComplete="nickname"
             />
@@ -457,6 +467,7 @@ export default function App() {
                   value={codeInput}
                   maxLength={4}
                   onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === "Enter") void gateSubmit(); }}
                   placeholder="ABCD"
                   autoCapitalize="characters"
                   autoCorrect="off"
@@ -470,10 +481,7 @@ export default function App() {
                 : "Each tab needs its own name — reuse one and every window plays the same warrior."}
             </p>
 
-            <button
-              className="vd-btn vd-btn--primary"
-              onClick={wrap(activeTab === "create" ? createRoom : () => joinRoom())}
-            >
+            <button className="vd-btn vd-btn--primary" onClick={gateSubmit}>
               <span>{activeTab === "create" ? "Convene a council" : "Join the council"}</span>
               <Sparkles size={15} />
             </button>
@@ -501,33 +509,44 @@ export default function App() {
 
           <div className="vd-gate__worlds">
             <span className="vd-label">Choose a world</span>
-            <div className="vd-worlds" style={{ marginTop: 10 }}>
-              {THEME_LIST.map((t) => {
-                const on = t.id === localThemeId;
-                const paid = !premium && isPremiumTheme(t.id) && !on;
-                return (
-                  <button
-                    key={t.id}
-                    className={`vd-world ${on ? "is-on" : ""}`}
-                    disabled={paid}
-                    title={paid ? `${t.name} — premium world` : t.name}
-                    onClick={() => setLocalThemeId(t.id)}
-                  >
-                    <span>
-                      <span className="vd-world__name">{t.name}</span>
-                      <span className="vd-world__sub">
-                        {paid ? "premium world" : `${t.goodTeamName} vs ${t.evilTeamName}`}
+            {activeTab === "join" ? (
+              // A joiner's pick here is discarded server-side — only the
+              // host's world applies. Leaving the grid interactive implied
+              // otherwise.
+              <p className="vd-voice" style={{ marginTop: 10 }}>
+                The world is set by the host — whatever they've chosen is
+                what you'll see once you're seated.
+              </p>
+            ) : (
+              <div className="vd-worlds" style={{ marginTop: 10 }}>
+                {THEME_LIST.map((t) => {
+                  const on = t.id === localThemeId;
+                  const paid = !premium && isPremiumTheme(t.id) && !on;
+                  return (
+                    <button
+                      key={t.id}
+                      className={`vd-world ${on ? "is-on" : ""}`}
+                      disabled={paid}
+                      title={paid ? `${t.name} — premium world` : t.name}
+                      onClick={() => setLocalThemeId(t.id)}
+                    >
+                      <span>
+                        <span className="vd-world__name">{t.name}</span>
+                        <span className="vd-world__sub">
+                          {paid ? "premium world" : `${t.goodTeamName} vs ${t.evilTeamName}`}
+                        </span>
                       </span>
-                    </span>
-                    {on && <Check size={13} color="var(--vd-brass)" style={{ marginLeft: "auto" }} />}
-                    {paid && <Lock size={12} style={{ marginLeft: "auto" }} />}
-                  </button>
-                );
-              })}
-            </div>
+                      {on && <Check size={13} color="var(--vd-brass)" style={{ marginLeft: "auto" }} />}
+                      {paid && <Lock size={12} style={{ marginLeft: "auto" }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <footer className="vd-gate__foot">
+            <a className="vd-pill" href="/learn"><BookOpen size={11} /> How to play</a>
             <a className="vd-pill" href="/rules"><ScrollText size={11} /> Rules</a>
             {signedIn ? (
               premium

@@ -115,7 +115,7 @@ export function LandingPage() {
             offering it again is noise, and what you actually want to know is
             what your account is worth. */}
         <div className="lp-acts">
-          <a className="lp-act lp-act--primary" href="/play">
+          <a className="lp-act lp-act--primary" href="/play?tab=join">
             Join the council <ArrowRight size={16} />
           </a>
           {heroDone && known && !signedIn && (
