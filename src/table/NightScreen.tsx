@@ -118,10 +118,21 @@ export function NightScreen({
 
         <div className="vd-centre__wide vd-actionbar">
           {isHost ? (
-            <button className="vd-btn vd-btn--primary" onClick={act(onBegin)}>
-              <span>All have read their lot — begin</span>
-              <Sword size={16} />
-            </button>
+            <>
+              {/* There's no way to tell who has actually held their card yet
+                  — unlike Vote and Quest, which both count a real
+                  submission, that would need a new server field this pass
+                  doesn't add. A reminder in place of a live count still sets
+                  the right expectation before a screen that can't be replayed. */}
+              <p className="vd-voice" style={{ marginBottom: 10 }}>
+                Make sure everyone at the table has held their card and read
+                it — there's no way to replay this screen for someone who missed it.
+              </p>
+              <button className="vd-btn vd-btn--primary" onClick={act(onBegin)}>
+                <span>All have read their lot — begin</span>
+                <Sword size={16} />
+              </button>
+            </>
           ) : (
             <div className="vd-panel">
               <p className="vd-voice" style={{ margin: 0 }}>
