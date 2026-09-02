@@ -3,7 +3,7 @@
    chronicle, and the overlay plate. All flat — no animation, no glow.
    ========================================================================== */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ---------------------------------------------------------------- clock --- */
 
@@ -227,6 +227,8 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
 
 /* -------------------------------------------------------------- plate ---- */
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export function Plate({
   eyebrow, title, danger, children, action,
 }: {
@@ -236,9 +238,50 @@ export function Plate({
   children?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /**
+   * WAI-ARIA modal-dialog basics: move focus in on mount, and keep Tab from
+   * leaving the dialog. Deliberately NOT adding Escape-to-dismiss here —
+   * unlike `RevealCeremony` (a dismissable announcement, where Escape already
+   * exists and is correct), several screens built on `Plate` — Excalibur,
+   * King Returns — are a forced, non-skippable game decision. There's no
+   * single action that's safe to bind Escape to across all of them.
+   */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const items = () =>
+      Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (n) => !n.hasAttribute("disabled"),
+      );
+    (items()[0] ?? el).focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = items();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el.addEventListener("keydown", onKeyDown);
+    return () => el.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <div className="vd-overlay" role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`vd-plate vd-studded ${danger ? "vd-plate--danger" : ""}`}>
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className={`vd-plate vd-studded ${danger ? "vd-plate--danger" : ""}`}
+      >
         <span className="vd-stud-b" aria-hidden />
         <div className="vd-label" style={{ textAlign: "center", letterSpacing: ".32em" }}>{eyebrow}</div>
         <h2 className="vd-h1" style={{ marginTop: 14, textAlign: "center", fontSize: 30 }}>{title}</h2>
