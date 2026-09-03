@@ -3,7 +3,7 @@
    chronicle, and the overlay plate. All flat — no animation, no glow.
    ========================================================================== */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /* ---------------------------------------------------------------- clock --- */
 
@@ -16,7 +16,7 @@ export function ClockFuse({
   endsAt,
   totalMs,
   ticks = 15,
-  caption = "then one minute to name the party",
+  caption = "talk it over — then 1 minute to pick",
 }: { endsAt: number; totalMs: number; ticks?: number; caption?: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -36,9 +36,9 @@ export function ClockFuse({
           {mm}:{String(ss).padStart(2, "0")}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="vd-label">To decide</div>
+          <div className="vd-label">Time left</div>
           {caption && (
-            <div style={{ marginTop: 7, font: "italic 400 13px/1 var(--vd-voice)", color: "var(--vd-ink-dim)" }}>
+            <div style={{ marginTop: 7, font: "400 13px/1.35 var(--vd-ui)", color: "var(--vd-ink-soft)" }}>
               {caption}
             </div>
           )}
@@ -54,8 +54,6 @@ export function ClockFuse({
 }
 
 /* -------------------------------------------------------- quest ladder --- */
-
-const ROMAN = ["I", "II", "III", "IV", "V"];
 
 export function QuestLadder({
   sizes,
@@ -78,7 +76,10 @@ export function QuestLadder({
 }) {
   return (
     <div>
-      <div className="vd-label vd-label--dim">The five quests</div>
+      <div className="vd-label">The five missions</div>
+      <p className="vd-hint" style={{ marginTop: 4 }}>
+        The small number is how many people go on that mission.
+      </p>
       <div className="vd-seg" style={{ marginTop: 12 }}>
         {sizes.map((size, i) => {
           const result = results[i];
@@ -90,17 +91,17 @@ export function QuestLadder({
                 fontSize: 16,
                 color: active ? "#171410" : result === "fail" ? "var(--vd-red-ink)" : result ? "var(--vd-ink)" : "var(--vd-ink-muted)",
               }}>
-                {ROMAN[i]}
+                {i + 1}
               </div>
               <div
                 style={{
-                  marginTop: 5, font: "700 9px/1 var(--vd-ui)",
+                  marginTop: 5, font: "700 11.5px/1 var(--vd-ui)",
                   color: active ? "rgba(23,20,16,.6)" : "var(--vd-ink-dim)",
                 }}
                 title={
                   tally
-                    ? `${tally.successes} success, ${tally.fails} fail of ${tally.successes + tally.fails}`
-                    : `${size} ride`
+                    ? `Mission ${i + 1}: ${tally.successes} Succeed, ${tally.fails} Fail`
+                    : `Mission ${i + 1}: ${size} people go`
                 }
               >
                 {tally ? (
@@ -125,10 +126,10 @@ export function QuestLadder({
       {doubleFail.length > 0 && (
         <div style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 7 }}>
           <span style={{ width: 5, height: 5, background: "var(--vd-red)" }} />
-          <span style={{ font: "400 12px/1.4 var(--vd-voice)", color: "var(--vd-ink-dim)" }}>
+          <span style={{ font: "400 13px/1.4 var(--vd-ui)", color: "var(--vd-ink-soft)" }}>
             {doubleFail.length === 1
-              ? `the ${ROMAN[doubleFail[0]]} quest needs two fails`
-              : `quests ${doubleFail.map((i) => ROMAN[i]).join(" and ")} need two fails`}
+              ? `Mission ${doubleFail[0] + 1} needs two Fail cards to fail`
+              : `Missions ${doubleFail.map((i) => i + 1).join(" and ")} need two Fail cards to fail`}
           </span>
         </div>
       )}
@@ -142,16 +143,21 @@ export function RejectionTrack({ used, max = 5 }: { used: number; max?: number }
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span className="vd-label vd-label--dim">Rejections</span>
-        <span style={{ font: "600 10px/1 var(--vd-ui)", letterSpacing: ".08em", color: "var(--vd-red-ink)" }}>
+        <span className="vd-label">Teams voted down</span>
+        <span style={{ font: "700 12.5px/1 var(--vd-ui)", color: "var(--vd-red-ink)" }}>
           {used} of {max}
         </span>
       </div>
-      <div className="vd-track" style={{ marginTop: 11 }} aria-label={`${used} of ${max} rejections used`}>
+      <div className="vd-track" style={{ marginTop: 11 }} aria-label={`${used} of ${max} teams voted down`}>
         {Array.from({ length: max }, (_, i) => (
           <i key={i} className={i < used ? "is-used" : undefined} />
         ))}
       </div>
+      <p className="vd-hint">
+        {used >= max - 1
+          ? "One more rejection and evil wins outright."
+          : `If ${max} teams in a row are voted down, evil wins.`}
+      </p>
     </div>
   );
 }
@@ -176,7 +182,7 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="vd-label">The chronicle</span>
+        <span className="vd-label">What's happened so far</span>
         <span className="vd-rule vd-rule--brass" style={{ flex: 1 }} />
       </div>
       <div style={{ marginTop: 16 }}>
@@ -187,16 +193,16 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
               <p className="vd-chron__text">{e.text}</p>
               {e.sides && (
                 <dl className="vd-chron__sides">
-                  <dt>For</dt>
-                  <dd>{e.sides.for.length ? e.sides.for.join(", ") : "no one"}</dd>
-                  <dt>Against</dt>
-                  <dd>{e.sides.against.length ? e.sides.against.join(", ") : "no one"}</dd>
+                  <dt>Voted yes</dt>
+                  <dd>{e.sides.for.length ? e.sides.for.join(", ") : "nobody"}</dd>
+                  <dt>Voted no</dt>
+                  <dd>{e.sides.against.length ? e.sides.against.join(", ") : "nobody"}</dd>
                 </dl>
               )}
               {e.tally && (
                 <div className="vd-chron__tally">
                   <span className="vd-chron__tally-part">
-                    <b>{e.tally.successes}</b> success{e.tally.successes === 1 ? "" : "es"}
+                    <b>{e.tally.successes}</b> succeed{e.tally.successes === 1 ? "" : "s"}
                   </span>
                   <span
                     className={`vd-chron__tally-part ${e.tally.fails > 0 ? "is-fail" : ""}`}
@@ -205,7 +211,7 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
                   </span>
                   <span className="vd-chron__tally-of">
                     of {e.tally.size}
-                    {e.tally.failsNeeded > 1 ? ` · needed ${e.tally.failsNeeded}` : ""}
+                    {e.tally.failsNeeded > 1 ? ` · ${e.tally.failsNeeded} needed to fail` : ""}
                   </span>
                 </div>
               )}
@@ -213,7 +219,7 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
                 <div className={`vd-chron__outcome ${e.outcome.held ? "vd-chron__outcome--held" : ""}`}>
                   <span>{e.outcome.label}</span>
                   {e.outcome.detail && (
-                    <span style={{ font: "600 9px/1 var(--vd-ui)", color: "var(--vd-ink-dim)" }}>{e.outcome.detail}</span>
+                    <span style={{ font: "700 11px/1 var(--vd-ui)", color: "var(--vd-ink-dim)" }}>{e.outcome.detail}</span>
                   )}
                 </div>
               )}
@@ -227,6 +233,8 @@ export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
 
 /* -------------------------------------------------------------- plate ---- */
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export function Plate({
   eyebrow, title, danger, children, action,
 }: {
@@ -236,12 +244,72 @@ export function Plate({
   children?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /**
+   * WAI-ARIA modal-dialog basics: move focus in on mount, and keep Tab from
+   * leaving the dialog. Deliberately NOT adding Escape-to-dismiss here —
+   * unlike `RevealCeremony` (a dismissable announcement, where Escape already
+   * exists and is correct), several screens built on `Plate` — Excalibur,
+   * King Returns — are a forced, non-skippable game decision. There's no
+   * single action that's safe to bind Escape to across all of them.
+   */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const items = () =>
+      Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        (n) => !n.hasAttribute("disabled"),
+      );
+    // Focus the plate itself, not its first focusable descendant. `children`
+    // render before `action`, so "first focusable" is often the riskiest
+    // option on screen — Excalibur's "Flip", King Returns' "Overturn" — not
+    // the safe default. `el` (tabIndex={-1} below) is a neutral landing spot
+    // a screen reader still announces via aria-label.
+    el.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = items();
+      if (focusable.length === 0) {
+        // Nothing inside to cycle to — hold focus here rather than letting
+        // Tab reach the board behind the overlay, which is not inert.
+        e.preventDefault();
+        el.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      // Mount hands focus to `el` itself, which matches neither `first` nor
+      // `last` — without this branch, a Shift+Tab on the very first keypress
+      // fell through to the browser's native backward walk, landing on
+      // whatever precedes the overlay in the document (the topbar, the
+      // shellbar) instead of staying trapped.
+      if (document.activeElement === el) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el.addEventListener("keydown", onKeyDown);
+    return () => el.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <div className="vd-overlay" role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`vd-plate vd-studded ${danger ? "vd-plate--danger" : ""}`}>
+      <div
+        ref={ref}
+        tabIndex={-1}
+        className={`vd-plate vd-studded ${danger ? "vd-plate--danger" : ""}`}
+      >
         <span className="vd-stud-b" aria-hidden />
-        <div className="vd-label" style={{ textAlign: "center", letterSpacing: ".32em" }}>{eyebrow}</div>
-        <h2 className="vd-h1" style={{ marginTop: 14, textAlign: "center", fontSize: 30 }}>{title}</h2>
+        <div className="vd-label" style={{ justifyContent: "center", letterSpacing: ".14em" }}>{eyebrow}</div>
+        <h2 className="vd-hero" style={{ marginTop: 12, textAlign: "center" }}>{title}</h2>
         {children}
         {action && <div style={{ marginTop: 20 }}>{action}</div>}
       </div>

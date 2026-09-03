@@ -10,9 +10,9 @@
 import { Check, Eye, Sword, X } from "lucide-react";
 import { Plate } from "../TableParts";
 import { QuestColumn, ChronicleColumn, SeatRing } from "./Parts";
-import { ActionLine } from "./TableShell";
+import { ActionLine, Waiting } from "./TableShell";
 import { Riders } from "./ProposeScreen";
-import { type TableProps, ROMAN, nameOf } from "./types";
+import { type TableProps, nameOf } from "./types";
 
 export function QuestScreen({
   room, pid, emblemSrc, act, onCard,
@@ -39,14 +39,15 @@ export function QuestScreen({
           room={room}
           emblemSrc={emblemSrc}
           stateFor={(p) => (room.proposedTeam.includes(p.playerId) ? "named" : "idle")}
-          noteFor={(p) => (room.proposedTeam.includes(p.playerId) ? "Riding" : undefined)}
+          noteFor={(p) => (room.proposedTeam.includes(p.playerId) ? "On the team" : undefined)}
         />
 
         <div className="vd-centre__wide vd-actionbar">
           {room.failsNeeded > 1 && (
             <div className="vd-panel vd-panel--danger" style={{ marginBottom: 12 }}>
               <p className="vd-voice" style={{ margin: 0, color: "var(--vd-red-ink)" }}>
-                Quest {ROMAN[room.questIndex]} needs <b>two fails</b> to sink.
+                Mission {room.questIndex + 1} needs <b>two Fail cards</b> to
+                fail. A single Fail is not enough this round.
               </p>
             </div>
           )}
@@ -54,27 +55,26 @@ export function QuestScreen({
           {!onTeam ? (
             <>
               <ActionLine
-                label="The party rides"
+                label="The team is playing their cards"
                 value={`${room.questProgress.submitted} of ${room.questProgress.total} in`}
               />
-              <div className="vd-panel">
-                <p className="vd-voice" style={{ margin: 0 }}>
-                  You did not ride. What they do out there is theirs alone.
-                </p>
-              </div>
+              <Waiting>
+                You're not on this mission, so you have no card to play. You'll
+                see how many Fails came back — never who played them.
+              </Waiting>
             </>
           ) : played ? (
             <>
-              <ActionLine label="Deed sealed" value={`${room.questProgress.submitted} of ${room.questProgress.total}`} />
-              <div className="vd-panel">
-                <p className="vd-voice" style={{ margin: 0 }}>
-                  Your card is face down with the others.
-                </p>
-              </div>
+              <ActionLine label="Your card is in" value={`${room.questProgress.submitted} of ${room.questProgress.total} in`} />
+              <Waiting>
+                Your card is face down with the rest. Waiting for{" "}
+                {room.questProgress.total - room.questProgress.submitted}{" "}
+                {room.questProgress.total - room.questProgress.submitted === 1 ? "other" : "others"}.
+              </Waiting>
             </>
           ) : (
             <>
-              <ActionLine label="Commit your deed" />
+              <ActionLine label="Play one card" />
               <div className="vd-cards">
                 <button
                   className="vd-card vd-card--success"
@@ -83,7 +83,7 @@ export function QuestScreen({
                 >
                   <Check size={20} />
                   <span className="vd-card__name">Succeed</span>
-                  <span className="vd-card__note">the quest holds</span>
+                  <span className="vd-card__note">Help this mission work</span>
                 </button>
                 <button
                   className="vd-card vd-card--fail"
@@ -92,20 +92,26 @@ export function QuestScreen({
                 >
                   <X size={20} />
                   <span className="vd-card__name">Fail</span>
-                  <span className="vd-card__note">sabotage it</span>
+                  <span className="vd-card__note">Secretly sabotage it</span>
                 </button>
               </div>
               {forced ? (
-                <p className="vd-voice" style={{ marginTop: 11 }}>
+                <p className="vd-hint">
                   {canFail
-                    ? "Your oath binds you — you can only sabotage this quest."
-                    : "Those sworn to the light may only succeed."}
+                    ? "Your role gives you no choice — you must play Fail."
+                    : "Good players can only play Succeed, so Fail is greyed out for you."}
                 </p>
               ) : room.opts.goodMayFail ? (
-                <p className="vd-voice" style={{ marginTop: 11 }}>
-                  House rule: the loyal may sabotage too. A Fail names no traitor.
+                <p className="vd-hint">
+                  House rule is on: good players may play Fail too, so a Fail
+                  card doesn't prove anyone is evil.
                 </p>
-              ) : null}
+              ) : (
+                <p className="vd-hint">
+                  Nobody ever learns which card came from which person — only
+                  how many Fails there were.
+                </p>
+              )}
             </>
           )}
         </div>
@@ -134,8 +140,8 @@ export function ExcaliburScreen({
   if (!armed) {
     return (
       <Plate
-        eyebrow="The deeds are sealed"
-        title="Turn the cards over"
+        eyebrow="All cards are in"
+        title="Ready to reveal"
         action={
           <button className="vd-btn vd-btn--primary" onClick={act(onSeal)}>
             <span>Turn the cards over</span>
@@ -143,7 +149,8 @@ export function ExcaliburScreen({
         }
       >
         <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          Every card is in but none is face up. Play an Ambush now if you hold one.
+          Every card is face down. This is the last moment to play an Ambush
+          card, if you're holding one.
         </p>
       </Plate>
     );
@@ -151,9 +158,10 @@ export function ExcaliburScreen({
 
   if (!mine) {
     return (
-      <Plate eyebrow="Excalibur is drawn" title={nameOf(room, holderId)}>
+      <Plate eyebrow="Excalibur" title={nameOf(room, holderId)}>
         <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          The bearer is weighing the blade over the sealed cards.
+          {nameOf(room, holderId)} is deciding whether to flip one team
+          member's card. Nothing for you to do — this only takes a moment.
         </p>
       </Plate>
     );
@@ -161,27 +169,31 @@ export function ExcaliburScreen({
 
   return (
     <Plate
-      eyebrow="Excalibur is yours"
-      title="Turn one card?"
+      eyebrow="You have Excalibur"
+      title="Flip somebody's card?"
       action={
         <button className="vd-btn" onClick={act(() => onUse(undefined))}>
-          <span>Sheathe it — change nothing</span>
+          <span>Don't use it — leave every card as it is</span>
         </button>
       }
     >
       <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-        The table will see <i>who</i> you struck. Only the two of you will ever
-        know what the card was.
+        Pick a team member to turn their Succeed into a Fail, or their Fail into
+        a Succeed.
       </p>
       <div className="vd-stack vd-stack--tight" style={{ marginTop: 16 }}>
         {room.proposedTeam
           .filter((id) => id !== pid)
           .map((id) => (
             <button key={id} className="vd-tile vd-tile--btn" onClick={act(() => onUse(id))}>
-              <Sword size={13} color="var(--vd-brass)" /> Flip {nameOf(room, id)}
+              <Sword size={14} color="var(--vd-brass)" /> Flip {nameOf(room, id)}'s card
             </button>
           ))}
       </div>
+      <p className="vd-hint" style={{ textAlign: "center" }}>
+        Everyone will see <b>who</b> you picked. Only you and they will ever
+        know which card it was.
+      </p>
     </Plate>
   );
 }
@@ -196,12 +208,12 @@ export function QuestResultPlate({
 
   return (
     <Plate
-      eyebrow={`Quest ${ROMAN[q.questIndex] ?? ""}`}
-      title={q.success ? "The quest holds" : "The quest falls"}
+      eyebrow={`Mission ${q.questIndex + 1} of 5`}
+      title={q.success ? "Mission succeeded" : "Mission failed"}
       danger={!q.success}
       action={
         <button className="vd-btn vd-btn--primary" onClick={onDismiss}>
-          <span>Read</span>
+          <span>Continue</span>
         </button>
       }
     >
@@ -212,12 +224,12 @@ export function QuestResultPlate({
       </div>
       <p className="vd-voice" style={{ marginTop: 16, textAlign: "center" }}>
         {q.fails === 0
-          ? "Not one hand turned against it."
-          : `${q.fails} card${q.fails === 1 ? "" : "s"} came back against the quest. Whose, nobody will say.`}
+          ? "Every card played was a Succeed."
+          : `${q.fails} Fail card${q.fails === 1 ? "" : "s"} came back out of ${q.size}. Who played ${q.fails === 1 ? "it" : "them"} stays secret.`}
       </p>
       {(q.revealed ?? []).length > 0 && (
         <div className="vd-stack vd-stack--tight" style={{ marginTop: 14 }}>
-          <span className="vd-label vd-label--dim">Called out by We Found You</span>
+          <span className="vd-label">Revealed by a "We Found You" card</span>
           {(q.revealed ?? []).map((r) => (
             <div key={r.playerId} className="vd-tile">
               <Eye size={13} color="var(--vd-brass)" /> {nameOf(room, r.playerId)}

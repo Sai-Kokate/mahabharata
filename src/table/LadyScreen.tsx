@@ -24,18 +24,19 @@ export function LadyScreen({
     return (
       <Plate eyebrow={ladyName} title={nameOf(room, holderId)}>
         <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          {nameOf(room, holderId)} is looking into the water. Whatever surfaces,
-          only they will see it.
+          {nameOf(room, holderId)} is picking one player to inspect. Only they
+          will be told the answer — and they're free to lie about it
+          afterwards.
         </p>
       </Plate>
     );
   }
 
   return (
-    <Plate eyebrow={ladyName} title="Look into the water">
+    <Plate eyebrow={ladyName} title="Choose someone to inspect">
       <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-        Choose one. You alone learn their true allegiance — and the Lady then
-        passes to them.
+        You'll privately learn whether they're good or evil. Nobody else is
+        told. The power then passes to whoever you pick.
       </p>
       <div className="vd-grid2" style={{ marginTop: 18 }}>
         {room.players
@@ -47,18 +48,19 @@ export function LadyScreen({
                 key={p.playerId}
                 className="vd-tile vd-tile--btn"
                 disabled={spent}
-                title={spent ? "Has already held the Lady" : undefined}
+                title={spent ? `${p.name} has already had this power, so cannot be inspected` : `Inspect ${p.name}`}
                 onClick={act(() => onUse(p.playerId))}
               >
-                <Eye size={13} color={spent ? "var(--vd-ink-dim)" : "var(--vd-brass)"} />
+                <Eye size={14} color={spent ? "var(--vd-ink-dim)" : "var(--vd-brass)"} />
                 {p.name}
-                {spent && <span className="vd-tile__meta">held it</span>}
+                {spent && <span className="vd-tile__meta">Can't be picked</span>}
               </button>
             );
           })}
       </div>
-      <p className="vd-voice" style={{ marginTop: 14, fontSize: 13 }}>
-        Anyone who has carried the Lady can never be examined again.
+      <p className="vd-hint" style={{ textAlign: "center" }}>
+        Greyed-out names have held this power before, so they can never be
+        inspected.
       </p>
     </Plate>
   );

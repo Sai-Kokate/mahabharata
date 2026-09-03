@@ -49,33 +49,35 @@ const PAGES = [
     file: "index.html",
     title: "Decevia — Social deduction for 5 to 18 players",
     description:
-      "Convene a council of 5 to 18. Some of you are sworn to the realm and some of you are lying about it. Free online social deduction across five worlds — no download, no account, just a four-letter code.",
+      "A free hidden-roles party game for 5 to 18 people in the same room, played on your phones. Most of you are good; a few are secretly not. No download and no account — just a four-letter code.",
     body: `
       <h1>Decevia — where friends become foes</h1>
       <p>
-        A council of five to eighteen players. Most are sworn to the realm.
-        A few are lying about it, and they know each other. Five quests decide
-        who wins, and every party that rides is chosen by the table, out loud,
-        with no proof available to anybody.
+        A hidden-roles party game for 5 to 18 people in the same room, played on
+        your phones. Most of you are on the good team. A few are secretly
+        working against it, and they know who each other are. Five missions
+        decide who wins, and the group chooses who goes on each one, out loud,
+        with no way to prove anything.
       </p>
       <p>
-        Free to play in the browser. No download and no account: one player
-        convenes a council, shares the four-letter code, and everyone else joins
-        from their own phone.
+        Free to play in a browser. No download and no account: one person starts
+        a game, shares the four-letter code, and everyone else joins from their
+        own phone.
       </p>
-      <h2>What a game looks like</h2>
+      <h2>How a game works</h2>
       <ul>
-        <li>Five to eighteen players, on any plan or none.</li>
-        <li>A hidden split: loyal servants against traitors who know one another.</li>
-        <li>Five quests. Three held and the realm stands; three lost and it falls.</li>
-        <li>Five parties turned away in a row also loses it, without a quest being ridden.</li>
-        <li>Win three quests and the Assassin still gets one guess at Merlin.</li>
+        <li>5 to 18 people, free or paid — group size is not part of the plan.</li>
+        <li>Everyone is secretly dealt a side: good, or one of the few who are evil and know each other.</li>
+        <li>Five missions. Good wins if three succeed; evil wins if three fail.</li>
+        <li>Evil also wins if five teams in a row are voted down, without a single mission being played.</li>
+        <li>Even after three missions succeed, the evil team gets one guess at who Merlin is.</li>
       </ul>
-      <h2>Five worlds</h2>
+      <h2>Five settings</h2>
       <p>
-        The same engine wearing different faces: Indian Mythology (Pandavas and
-        Kauravas), the Medieval Kingdom of Arthur and Mordred, Egyptian Gods,
-        Greek Mythology, and the Maratha Empire.
+        The same game with different character names: Indian Mythology (Pandavas
+        and Kauravas), the Medieval Kingdom of Arthur and Mordred, Egyptian
+        Gods, Greek Mythology, and the Maratha Empire. The rules are identical
+        in all of them.
       </p>
       <p>
         <a href="/learn">How to play</a> · <a href="/rules">The full rules</a>
@@ -84,71 +86,73 @@ const PAGES = [
   {
     path: "/learn",
     file: "learn/index.html",
-    title: "How to play Decevia — an animated walkthrough",
+    title: "How to play Decevia — a step-by-step walkthrough",
     description:
-      "An animated walkthrough of social deduction: a round from start to finish, every character and what they see at night, the three expansions, and all nine plot cards.",
+      "A walkthrough you can step through: one round from start to finish, every role and what it gets shown, the three add-ons, and all nine plot cards.",
     body: `
       <h1>How to play</h1>
       <p>
-        An animated walkthrough. Watch a round happen a beat at a time, then
-        meet the cast and look up the expansions.
+        A walkthrough you can step through at your own pace. Watch one round
+        happen a moment at a time, then read what each role can do.
       </p>
       <h2>A round, start to finish</h2>
       <p>
-        The leader names a party. The whole table votes on it — not just the
-        people riding. If it passes, only the riders play a card, face down.
-        One Fail sinks most quests. The cards are shuffled before they are
-        turned, so nobody learns who played what. That argument is the game.
+        The leader chooses a team. Everyone votes yes or no on it — not just the
+        people going. If it passes, only the people on the team play a card,
+        face down: Succeed or Fail. One Fail is enough to sink most missions.
+        The cards are shuffled before they are turned over, so nobody learns who
+        played what. Arguing about that is the whole game.
       </p>
-      <h2>The first night</h2>
+      <h2>Secret roles</h2>
       <p>
-        Everything anyone knows for certain comes from one minute at the start:
-        the traitors learn each other, Merlin sees the traitors but not Mordred,
-        Percival sees Merlin and Morgana without being told which is which, and
-        the loyal servants are shown nothing at all.
+        Everything anyone knows for certain comes from one moment at the start:
+        the evil players are shown each other, Merlin is shown the evil players
+        but not Mordred, Percival is shown two names and told one of them is
+        Merlin, and ordinary good players are shown nothing at all.
       </p>
-      <h2>The expansions</h2>
+      <h2>The three add-ons</h2>
       <ul>
-        <li><strong>Lady of the Lake</strong> — at seven or more players, the holder learns one player's true allegiance, then passes the token to them.</li>
-        <li><strong>Excalibur</strong> — the leader arms one rider, who may flip another rider's card after the fact.</li>
-        <li><strong>The Lancelots</strong> — one loyal, one fallen, their cards forced, and their sides able to trade mid-game.</li>
-        <li><strong>Plot cards</strong> — nine cards dealt face down each round, from seizing leadership to secretly examining a played card.</li>
+        <li><strong>Lady of the Lake</strong> — with 7 or more players, one person privately learns somebody's real side, then hands the power to them.</li>
+        <li><strong>Excalibur</strong> — the leader gives one team member the power to flip another member's card after it has been played.</li>
+        <li><strong>The Lancelots</strong> — two players, one per side, with no choice of card, whose sides can swap over mid-game.</li>
+        <li><strong>Plot cards</strong> — nine cards dealt face down each round, from taking over as leader to secretly looking at somebody's played card.</li>
       </ul>
       <p><a href="/">Play Decevia</a> · <a href="/rules">The full rules</a></p>`,
   },
   {
     path: "/rules",
     file: "rules/index.html",
-    title: "The rules of Decevia — team sizes, roles and expansions",
+    title: "The rules of Decevia — team sizes, roles and add-ons",
     description:
-      "Team sizes and quest sizes for 5 to 18 players, every role's night knowledge, the two-fail quest, the five-rejection loss, and the house rules for tables above ten.",
+      "How many people are evil, how big each mission team is from 5 to 18 players, what every role gets shown, the missions that need two Fails, and how games above ten work.",
     body: `
       <h1>The rules</h1>
-      <h2>The table</h2>
+      <h2>How many are evil</h2>
       <p>
-        The traitor count is fixed by how many sit down — roughly one in three.
-        Quest sizes are fixed too. At seven players or more the fourth quest
-        needs two Fails to sink it; above ten, so does the third.
+        You don't choose this: it is fixed by how many people are playing —
+        roughly one in three. The size of each mission team is fixed too. With 7
+        or more players, mission 4 needs two Fail cards to fail rather than one;
+        above 10 players, so does mission 3.
       </p>
-      <h2>Winning</h2>
+      <h2>How you win</h2>
       <p>
-        Three quests held and the realm stands — unless the Assassin then names
-        Merlin correctly, which takes the game for evil at the last breath.
-        Three quests lost, or five parties turned away in a row, and the realm
-        falls.
+        Good wins by getting three missions to succeed — unless the evil team
+        then correctly guesses who Merlin is, which takes the game at the last
+        second. Evil wins by making three missions fail, or by getting five
+        teams in a row voted down.
       </p>
       <h2>The roles</h2>
       <p>
-        Merlin, Percival, Guinevere, Tristan and Isolde, the loyal Lancelot and
-        the loyal servants stand for the realm. The Assassin, Morgana, Mordred,
-        Oberon, the fallen Lancelot and the minions stand against it. Every
-        world renames them; the abilities never change.
+        On the good team: Merlin, Percival, Guinevere, Tristan and Isolde, the
+        good Lancelot, and ordinary good players. On the evil team: the
+        Assassin, Morgana, Mordred, Oberon, the evil Lancelot, and ordinary evil
+        players. Every setting renames them; what they can do never changes.
       </p>
-      <h2>Above ten players</h2>
+      <h2>More than 10 players</h2>
       <p>
-        Avalon is printed for five to ten. Decevia goes to eighteen, with the
-        team split and the quest sizes extrapolated from the printed table's own
-        arithmetic rather than invented.
+        The printed board game only covers 5 to 10 players. Decevia goes up to
+        18, carrying on the same arithmetic the printed table already uses for
+        the team split and the mission sizes rather than inventing numbers.
       </p>
       <p><a href="/">Play Decevia</a> · <a href="/learn">How to play</a></p>`,
   },

@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "./auth";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  BadgeCheck, Check, Clock, Crown, Loader2, LogOut, QrCode, ScrollText,
-  Sparkles, Users, X,
+  ArrowLeft, BadgeCheck, Check, Clock, Crown, Loader2, LogOut, QrCode,
+  ScrollText, Sparkles, Users, X,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { SignInCard } from "./SignIn";
@@ -43,12 +43,12 @@ export default function UpgradePage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState<"ok" | "error">("ok");
   const [busy, setBusy] = useState(false);
   const [memberDraft, setMemberDraft] = useState<string[]>([]);
 
   const seats = config?.seats ?? 7;
 
-  // Six blanks beside the buyer's own (always-included) seat.
   useEffect(() => {
     setMembers((m) => (m.length === seats - 1 ? m : Array(seats - 1).fill("")));
   }, [seats]);
@@ -62,12 +62,7 @@ export default function UpgradePage() {
 
   const qr = useMemo(() => {
     if (!config?.upiVpa || !amount) return null;
-    return upiLink(
-      config.upiVpa,
-      config.payeeName,
-      amount,
-      `Decevia ${plan} plan`,
-    );
+    return upiLink(config.upiVpa, config.payeeName, amount, `Decevia ${plan} plan`);
   }, [config?.upiVpa, config?.payeeName, amount, plan]);
 
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
@@ -75,9 +70,10 @@ export default function UpgradePage() {
     setMsg("");
     try {
       await fn();
-      if (ok) setMsg(ok);
+      if (ok) { setMsg(ok); setMsgKind("ok"); }
     } catch (e: any) {
       setMsg(e?.message ?? "Something went wrong.");
+      setMsgKind("error");
     } finally {
       setBusy(false);
     }
@@ -86,9 +82,12 @@ export default function UpgradePage() {
   /* ------------------------------ loading ------------------------------- */
   if (viewer === undefined || config === undefined) {
     return (
-      <div className="rules-page">
-        <div className="billing-center">
-          <Loader2 size={26} className="billing-spin" />
+      <div className="vd-board">
+        <div className="vd-content vd-center">
+          <p className="vd-loading" role="status">
+            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+            <span>Loading your plan…</span>
+          </p>
         </div>
       </div>
     );
@@ -97,301 +96,375 @@ export default function UpgradePage() {
   /* --------------------------- not signed in --------------------------- */
   if (!viewer.signedIn) {
     return (
-      <div className="rules-page">
-        <header className="rules-hero">
-          <a className="rules-back" href="/play">← Back to council</a>
-          <p className="rules-kicker"><Crown size={14} /> Premium</p>
-          <h1>Unlock the full war</h1>
-          <p className="rules-lede">
-            One plan covers <strong>{seats} people</strong>. Sign in to buy one, or
-            to claim a seat someone bought for you.
-          </p>
-        </header>
-        <section className="rules-section">
+      <div className="vd-board">
+        <div className="vd-content vd-page">
+          <div className="vd-page__back">
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
+          </div>
+          <header className="vd-page__head">
+            <span className="vd-label vd-label--brass"><Crown size={13} /> Paid plan</span>
+            <h1 className="vd-hero">Get the extra roles and settings</h1>
+            <p className="vd-voice">
+              One plan covers <strong>{seats} people</strong>, and the game is
+              free to play without it. Sign in below to buy a plan, or to use a
+              place on one somebody has already bought for you.
+            </p>
+          </header>
           <SignInCard />
-        </section>
-        <TierTable config={config} />
+          <TierTable config={config} />
+        </div>
       </div>
     );
   }
 
   /* ----------------------------- signed in ----------------------------- */
   return (
-    <div className="rules-page">
-      <header className="rules-hero">
-        <a className="rules-back" href="/play">← Back to council</a>
-        <p className="rules-kicker"><Crown size={14} /> Premium</p>
-        <h1>{viewer.premium ? "Your plan" : "Unlock the full war"}</h1>
-        <p className="rules-lede">
-          Signed in as <strong>{viewer.email}</strong>
-          {viewer.isAdmin && (
-            <> · <a className="billing-link" href="/admin">admin console</a></>
-          )}
-          {" · "}
-          <button className="billing-signout" onClick={() => void signOut()}>
-            <LogOut size={12} /> sign out
-          </button>
-        </p>
-      </header>
-
-      {/* ------------------------------ status ---------------------------- */}
-      <section className="rules-section">
-        <div
-          className={`billing-status ${viewer.premium ? "is-live" : "is-free"}`}
-        >
-          {viewer.premium ? <BadgeCheck size={22} /> : <ScrollText size={22} />}
-          <div>
-            <strong>
-              {viewer.premium ? "Premium active" : "Free tier"}
-            </strong>
-            <p>
-              {viewer.premium ? (
-                <>
-                  Every character and expansion is unlocked
-                  {viewer.expiresAt ? <> until {fmtDate(viewer.expiresAt)}</> : null}.
-                  {!viewer.iOwnPlan && viewer.ownerEmail && (
-                    <> You hold a seat on <strong>{viewer.ownerEmail}</strong>'s plan.</>
-                  )}
-                </>
-              ) : (
-                <>
-                  You can play full games of base Avalon. Mordred, Oberon,
-                  Guinevere, the lovers, the Lancelots, all three expansions and
-                  the themed worlds need a plan.
-                </>
-              )}
-            </p>
-          </div>
+    <div className="vd-board">
+      <div className="vd-content vd-page">
+        <div className="vd-page__back">
+          <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
         </div>
-      </section>
-
-      {/* --------------------------- seat editor -------------------------- */}
-      {sub && sub.iAmOwner && (
-        <section className="rules-section">
-          <h2><Users size={18} /> Who your plan covers</h2>
-          <p className="rules-note">
-            Your own seat ({sub.ownerEmail}) is permanent. Add up to{" "}
-            {sub.seats - 1} more — they get premium in any room they host or join
-            once they sign in with that email address.
+        <header className="vd-page__head">
+          <span className="vd-label vd-label--brass"><Crown size={13} /> Paid plan</span>
+          <h1 className="vd-hero">{viewer.premium ? "Your plan" : "Get the extra roles and settings"}</h1>
+          <p className="vd-voice">
+            Signed in as <strong>{viewer.email}</strong>
+            {viewer.isAdmin && (
+              <>
+                {" · "}
+                <a className="vd-textbtn" href="/admin" style={{ display: "inline-flex" }}>admin console</a>
+              </>
+            )}
           </p>
-          <div className="billing-emails">
-            {Array.from({ length: sub.seats - 1 }).map((_, i) => (
-              <input
-                key={i}
-                className="field-input"
-                placeholder={`teammate ${i + 1} — email`}
-                value={memberDraft[i] ?? ""}
-                onChange={(e) => {
-                  const next = [...memberDraft];
-                  next[i] = e.target.value;
-                  setMemberDraft(next);
-                }}
-              />
-            ))}
-          </div>
-          <button
-            className="btn-gold-hover billing-btn"
-            disabled={busy}
-            onClick={() =>
-              void run(
-                () =>
-                  mMembers({
-                    emails: memberDraft.map((e) => e.trim()).filter(Boolean),
-                  }),
-                "Seats updated.",
-              )
-            }
-          >
-            <Check size={15} /> Save seats
+          <button className="vd-textbtn" onClick={() => void signOut()}>
+            <LogOut size={13} /> Sign out
           </button>
-        </section>
-      )}
+        </header>
 
-      {/* ---------------------------- buy flow --------------------------- */}
-      {pendingOrder ? (
-        <section className="rules-section">
-          <h2><Clock size={18} /> Awaiting approval</h2>
-          <div className="billing-status is-pending">
-            <Clock size={22} />
+        {/* ------------------------------ status ---------------------------- */}
+        <section className="vd-page__section">
+          <div className="vd-studded vd-panel vd-panel--strong vd-row" style={{ alignItems: "flex-start", gap: 16 }}>
+            <span className="vd-stud-b" aria-hidden />
+            {viewer.premium ? <BadgeCheck size={22} color="var(--vd-brass)" /> : <ScrollText size={22} />}
             <div>
-              <strong>
-                {pendingOrder.plan === "yearly" ? "Yearly" : "Monthly"} plan ·{" "}
-                {INR(pendingOrder.amountInr)}
+              <strong className="vd-h3" style={{ display: "block", marginBottom: 6 }}>
+                {viewer.premium ? "Your paid plan is active" : "You're on the free plan"}
               </strong>
-              <p>
-                Submitted {fmtDate(pendingOrder.createdAt)} with reference{" "}
-                <code>{pendingOrder.paymentRef}</code>. An admin will verify the
-                payment and activate your {pendingOrder.seats} seats.
+              <p className="vd-voice" style={{ margin: 0 }}>
+                {viewer.premium ? (
+                  <>
+                    Every role, add-on and setting is unlocked
+                    {viewer.expiresAt ? <> until {fmtDate(viewer.expiresAt)}</> : null}.
+                    {!viewer.iOwnPlan && viewer.ownerEmail && (
+                      <> You have a place on <strong>{viewer.ownerEmail}</strong>'s plan.</>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    You can play full games with no time limit and up to 18
+                    people. A paid plan adds the extra roles (Mordred, Oberon,
+                    Guinevere, the lovers, the Lancelots), all three add-ons,
+                    and the four other settings.
+                  </>
+                )}
               </p>
             </div>
           </div>
-          <button
-            className="btn-ghost-hover billing-btn"
-            disabled={busy}
-            onClick={() =>
-              void run(() => mCancel({ orderId: pendingOrder._id }), "Request withdrawn.")
-            }
-          >
-            <X size={15} /> Withdraw request
-          </button>
         </section>
-      ) : (
-        <>
-          <section className="rules-section">
-            <h2><Crown size={18} /> Choose a plan</h2>
-            <div className="billing-plans">
-              {(["monthly", "yearly"] as const).map((k) => {
-                const price = k === "yearly" ? config.yearlyInr : config.monthlyInr;
-                const on = plan === k;
-                return (
-                  <button
-                    key={k}
-                    className={`billing-plan ${on ? "is-on" : ""}`}
-                    onClick={() => setPlan(k)}
-                  >
-                    <span className="billing-plan__name">
-                      {k === "yearly" ? "Yearly" : "Monthly"}
-                    </span>
-                    <span className="billing-plan__price">{INR(price)}</span>
-                    <span className="billing-plan__sub">
-                      {seats} seats · {k === "yearly" ? "365" : "30"} days
-                    </span>
-                    {k === "yearly" && (
-                      <span className="billing-plan__save">
-                        saves {INR(Math.max(0, config.monthlyInr * 12 - config.yearlyInr))}
-                      </span>
-                    )}
-                    {on && <Check size={16} className="billing-plan__tick" />}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
-          <section className="rules-section">
-            <h2><QrCode size={18} /> Pay {INR(amount)}</h2>
-            {config.qrImageUrl ? (
-              <div className="billing-qr">
-                <img src={config.qrImageUrl} alt="Payment QR code" />
-                <p>Scan with any UPI app, then paste the reference below.</p>
-              </div>
-            ) : qr ? (
-              <div className="billing-qr">
-                <div className="billing-qr__frame">
-                  <QRCodeSVG value={qr} size={188} level="M" includeMargin />
-                </div>
-                <p>
-                  Scan with any UPI app to pay <strong>{INR(amount)}</strong> to{" "}
-                  <strong>{config.upiVpa}</strong>, then paste the transaction
-                  reference below.
-                </p>
-                <a className="billing-link" href={qr}>
-                  Open in a UPI app on this device
-                </a>
-              </div>
-            ) : (
-              <div className="billing-warn">
-                Payment is not configured yet. The admin needs to set{" "}
-                <code>UPI_VPA</code> (or <code>PAYMENT_QR_URL</code>) in the
-                Convex environment.
-              </div>
-            )}
-          </section>
-
-          <section className="rules-section">
-            <h2><Users size={18} /> Who should it cover?</h2>
-            <p className="rules-note">
-              Your seat ({viewer.email}) is included automatically. List up to{" "}
-              {seats - 1} teammates — they each need an account on that same
-              email address to use it. You can change these later.
+        {/* --------------------------- seat editor -------------------------- */}
+        {sub && sub.iAmOwner && (
+          <section className="vd-page__section">
+            <h2 className="vd-h2 vd-h2--icon">
+              <Users size={18} /> Who your plan covers
+            </h2>
+            <p className="vd-voice" style={{ margin: "8px 0 16px" }}>
+              Your own place ({sub.ownerEmail}) is always included. You can add
+              up to {sub.seats - 1} more people by email. Once they sign in with
+              that address, any game they host or join gets the paid features.
             </p>
-            <div className="billing-emails">
-              {members.map((val, i) => (
+            <div className="vd-grid2">
+              {Array.from({ length: sub.seats - 1 }).map((_, i) => (
                 <input
                   key={i}
-                  className="field-input"
-                  placeholder={`teammate ${i + 1} — email (optional)`}
-                  value={val}
+                  className="vd-field"
+                  placeholder={`Person ${i + 1} — their email`}
+                  value={memberDraft[i] ?? ""}
                   onChange={(e) => {
-                    const next = [...members];
+                    const next = [...memberDraft];
                     next[i] = e.target.value;
-                    setMembers(next);
+                    setMemberDraft(next);
                   }}
                 />
               ))}
             </div>
-
-            <label className="field-label" htmlFor="payref">
-              UPI transaction reference / UTR
-            </label>
-            <input
-              id="payref"
-              className="field-input"
-              placeholder="e.g. 4179 1234 5678"
-              value={paymentRef}
-              onChange={(e) => setPaymentRef(e.target.value)}
-            />
-            <label className="field-label" htmlFor="paynote">
-              Anything the admin should know (optional)
-            </label>
-            <input
-              id="paynote"
-              className="field-input"
-              placeholder="paid from a different number, etc."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-
             <button
-              className="btn-gold-hover billing-btn"
-              disabled={busy || paymentRef.trim().length < 4}
+              className="vd-btn vd-btn--primary"
+              disabled={busy}
               onClick={() =>
                 void run(
-                  () =>
-                    mSubmit({
-                      plan,
-                      memberEmails: members.map((e) => e.trim()).filter(Boolean),
-                      paymentRef,
-                      note: note.trim() || undefined,
-                    }),
-                  "Request submitted — an admin will verify your payment.",
+                  () => mMembers({ emails: memberDraft.map((e) => e.trim()).filter(Boolean) }),
+                  "Saved. Everyone listed now has the paid features.",
                 )
               }
             >
-              {busy ? <Loader2 size={15} className="billing-spin" /> : <Check size={15} />}{" "}
-              I have paid — submit for approval
+              <span>Save who's covered</span>
+              <Check size={16} />
             </button>
           </section>
-        </>
-      )}
+        )}
 
-      {msg && <p className="billing-msg">{msg}</p>}
-
-      {/* --------------------------- order history ------------------------ */}
-      {(orders ?? []).length > 0 && (
-        <section className="rules-section">
-          <h2><ScrollText size={18} /> Your requests</h2>
-          <div className="rules-map">
-            <div className="rules-map__head">
-              <span>Submitted</span><span>Plan</span><span>Status</span>
-            </div>
-            {(orders ?? []).map((o) => (
-              <div key={o._id} className="rules-map__row">
-                <span className="rules-map__base">{fmtDate(o.createdAt)}</span>
-                <span className="rules-map__themed">
-                  {o.plan} · {INR(o.amountInr)}
-                </span>
-                <span className={`billing-badge is-${o.status}`}>{o.status}</span>
-                {o.adminNote && (
-                  <span className="billing-adminnote">“{o.adminNote}”</span>
-                )}
+        {/* ---------------------------- buy flow --------------------------- */}
+        {pendingOrder ? (
+          <section className="vd-page__section">
+            <h2 className="vd-h2 vd-h2--icon">
+              <Clock size={18} /> Waiting for us to check your payment
+            </h2>
+            <div
+              className="vd-studded vd-panel vd-panel--strong vd-row"
+              style={{ alignItems: "flex-start", gap: 16, marginTop: 12 }}
+            >
+              <span className="vd-stud-b" aria-hidden />
+              <Clock size={22} color="var(--vd-brass)" />
+              <div>
+                <strong className="vd-h3" style={{ display: "block", marginBottom: 6 }}>
+                  {pendingOrder.plan === "yearly" ? "Yearly" : "Monthly"} plan ·{" "}
+                  {INR(pendingOrder.amountInr)}
+                </strong>
+                <p className="vd-voice" style={{ margin: 0 }}>
+                  You sent this on {fmtDate(pendingOrder.createdAt)} with the
+                  reference <code>{pendingOrder.paymentRef}</code>. Someone will
+                  check the payment and switch on the paid features for all{" "}
+                  {pendingOrder.seats} people. Nothing else for you to do — you
+                  can close this page.
+                </p>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </div>
+            <button
+              className="vd-pill vd-pill--action"
+              style={{ marginTop: 12 }}
+              disabled={busy}
+              onClick={() =>
+                void run(() => mCancel({ orderId: pendingOrder._id }), "Request cancelled. You can submit a new one whenever you like.")
+              }
+            >
+              <X size={14} /> Cancel this request
+            </button>
+          </section>
+        ) : (
+          <>
+            <section className="vd-page__section">
+              <h2 className="vd-h2 vd-h2--icon">
+                <Crown size={18} /> 1. Choose a plan
+              </h2>
+              <div className="vd-grid2" style={{ marginTop: 16 }}>
+                {(["monthly", "yearly"] as const).map((k) => {
+                  const price = k === "yearly" ? config.yearlyInr : config.monthlyInr;
+                  const on = plan === k;
+                  return (
+                    <button
+                      key={k}
+                      className={`vd-opt ${on ? "is-on" : ""}`}
+                      style={{ minHeight: 96 }}
+                      onClick={() => setPlan(k)}
+                    >
+                      <span className="vd-opt__top">
+                        <span className="vd-opt__name" style={{ textTransform: "uppercase" }}>
+                          {k === "yearly" ? "Yearly" : "Monthly"}
+                        </span>
+                        {on && <span className="vd-opt__lock"><Check size={14} /> Chosen</span>}
+                      </span>
+                      <span className="vd-numeral" style={{ fontSize: 22, color: "var(--vd-brass)" }}>
+                        {INR(price)}
+                      </span>
+                      <span className="vd-opt__desc">
+                        Covers {seats} people for{" "}
+                        {k === "yearly" ? "a year" : "30 days"}
+                        {k === "yearly" && (
+                          <>. Saves {INR(Math.max(0, config.monthlyInr * 12 - config.yearlyInr))} versus paying monthly</>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
 
-      <TierTable config={config} />
+            <section className="vd-page__section">
+              <h2 className="vd-h2 vd-h2--icon">
+                <QrCode size={18} /> 2. Pay {INR(amount)}
+              </h2>
+              {config.qrImageUrl ? (
+                <div className="vd-stack" style={{ alignItems: "center", textAlign: "center", marginTop: 16 }}>
+                  <span className="vd-qr-frame">
+                    <img src={config.qrImageUrl} alt="Payment QR code" style={{ display: "block", width: 220 }} />
+                  </span>
+                  <p className="vd-voice">
+                    Scan this with any UPI app to pay <strong>{INR(amount)}</strong>,
+                    then copy the transaction reference into the form below.
+                  </p>
+                </div>
+              ) : qr ? (
+                <div className="vd-stack" style={{ alignItems: "center", textAlign: "center", marginTop: 16 }}>
+                  <span className="vd-qr-frame">
+                    <QRCodeSVG value={qr} size={188} level="M" includeMargin />
+                  </span>
+                  <p className="vd-voice">
+                    Scan this with any UPI app to pay <strong>{INR(amount)}</strong>{" "}
+                    to <strong>{config.upiVpa}</strong>, then copy the
+                    transaction reference into the form below.
+                  </p>
+                  <a className="vd-textbtn" href={qr}>Or pay in an app on this phone</a>
+                </div>
+              ) : (
+                <div className="vd-panel vd-panel--danger" style={{ marginTop: 16 }}>
+                  <p className="vd-voice" style={{ margin: 0, color: "var(--vd-red-ink)" }}>
+                    Payments aren't set up yet, so you can't buy a plan right
+                    now. (If you're the admin: set <code>UPI_VPA</code> or{" "}
+                    <code>PAYMENT_QR_URL</code> in the Convex environment.)
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <section className="vd-page__section">
+              <h2 className="vd-h2 vd-h2--icon">
+                <Users size={18} /> 3. Say who it covers, and send it
+              </h2>
+              <p className="vd-voice" style={{ margin: "8px 0 16px" }}>
+                You're included automatically:
+              </p>
+              <div className="vd-tile vd-tile--parchment" style={{ marginBottom: 16 }}>
+                {viewer.email}
+                <span className="vd-tile__meta" style={{ color: "inherit" }}>You</span>
+              </div>
+              <p className="vd-voice" style={{ margin: "0 0 12px" }}>
+                Add up to {seats - 1} other people, or leave these blank and fill
+                them in later. Each person needs to sign in with the same email
+                address you type here.
+              </p>
+              <div className="vd-grid2">
+                {members.map((val, i) => (
+                  <input
+                    key={i}
+                    className="vd-field"
+                    placeholder={`Person ${i + 1} — their email (optional)`}
+                    value={val}
+                    onChange={(e) => {
+                      const next = [...members];
+                      next[i] = e.target.value;
+                      setMembers(next);
+                    }}
+                  />
+                ))}
+              </div>
+
+              <label className="vd-field__label" htmlFor="payref">
+                Payment reference (UTR)
+              </label>
+              <input
+                id="payref"
+                className="vd-field"
+                placeholder="e.g. 4179 1234 5678"
+                value={paymentRef}
+                onChange={(e) => setPaymentRef(e.target.value)}
+                aria-describedby="payref-help"
+              />
+              <span className="vd-hint" id="payref-help">
+                Your UPI app shows this after the payment goes through. It's how
+                we match your payment to your account.
+              </span>
+              <label className="vd-field__label" htmlFor="paynote">
+                Anything else we should know? (optional)
+              </label>
+              <input
+                id="paynote"
+                className="vd-field"
+                placeholder="e.g. paid from a different number"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+
+              <button
+                className="vd-btn vd-btn--primary"
+                disabled={busy || paymentRef.trim().length < 4}
+                onClick={() =>
+                  void run(
+                    () =>
+                      mSubmit({
+                        plan,
+                        memberEmails: members.map((e) => e.trim()).filter(Boolean),
+                        paymentRef,
+                        note: note.trim() || undefined,
+                      }),
+                    "Sent. We'll check your payment and switch the features on — usually within a few hours.",
+                  )
+                }
+              >
+                <span>
+                  {paymentRef.trim().length < 4
+                    ? "Add your payment reference to continue"
+                    : "I've paid — send this for checking"}
+                </span>
+                {busy ? <Loader2 size={16} className="vd-spin" /> : <Check size={16} />}
+              </button>
+              <span className="vd-hint">
+                We check payments by hand, so this usually takes a few hours.
+                You'll see the status on this page.
+              </span>
+            </section>
+          </>
+        )}
+
+        {msg && (
+          <p
+            className={`vd-panel ${msgKind === "error" ? "vd-panel--danger vd-errline" : "vd-panel--strong"}`}
+            style={{ margin: "0 0 20px" }}
+          >
+            {msg}
+          </p>
+        )}
+
+        {/* --------------------------- order history ------------------------ */}
+        {(orders ?? []).length > 0 && (
+          <section className="vd-page__section">
+            <h2 className="vd-h2 vd-h2--icon">
+              <ScrollText size={18} /> Your past requests
+            </h2>
+            <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
+              <div className="vd-rowlist__head">
+                <span>Submitted</span><span>Plan</span><span>Status</span>
+              </div>
+              {(orders ?? []).map((o) => (
+                <div key={o._id} className="vd-rowlist__row">
+                  <span>{fmtDate(o.createdAt)}</span>
+                  <span>{o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}</span>
+                  <span>
+                    <span
+                      className={`vd-pill ${
+                        o.status === "approved" ? "vd-pill--parchment"
+                        : o.status === "pending" ? "vd-pill--brass"
+                        : "vd-pill--danger"
+                      }`}
+                    >
+                      {o.status === "approved" ? "Approved"
+                        : o.status === "pending" ? "Being checked"
+                        : "Not approved"}
+                    </span>
+                    {o.adminNote && (
+                      <span className="vd-voice" style={{ display: "block", marginTop: 4, fontSize: 12 }}>
+                        &ldquo;{o.adminNote}&rdquo;
+                      </span>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <TierTable config={config} />
+      </div>
     </div>
   );
 }
@@ -399,28 +472,33 @@ export default function UpgradePage() {
 /** What the two tiers actually contain. */
 function TierTable({ config }: { config: any }) {
   return (
-    <section className="rules-section">
-      <h2><Sparkles size={18} /> What each tier includes</h2>
-      <div className="rules-win">
-        <div className="rules-win__card rules-win__card--good">
-          <ScrollText size={22} />
-          <h3>Free</h3>
-          <ul>
-            <li>Merlin &amp; the Assassin</li>
-            <li>Percival &amp; Morgana</li>
-            <li>Loyal servants &amp; minions</li>
-            <li>The Medieval board</li>
-            <li>Tables of 5 to 18 — the full house rules above ten</li>
+    <section className="vd-page__section">
+      <h2 className="vd-h2 vd-h2--icon">
+        <Sparkles size={18} /> What each plan includes
+      </h2>
+      <div className="vd-grid2" style={{ marginTop: 16 }}>
+        <div className="vd-panel vd-panel--strong" style={{ padding: 18 }}>
+          <ScrollText size={22} color="var(--vd-brass)" />
+          <h3 className="vd-h3" style={{ margin: "10px 0" }}>Free — no account needed</h3>
+          <ul className="vd-list">
+            <li>Merlin and the Assassin</li>
+            <li>Percival and Morgana</li>
+            <li>Plain good and evil players</li>
+            <li>The Medieval Kingdom setting</li>
+            <li>Games of 5 to 18 people</li>
           </ul>
         </div>
-        <div className="rules-win__card rules-win__card--evil">
-          <Crown size={22} />
-          <h3>Premium · covers {config?.seats ?? 7} people</h3>
-          <ul>
+        <div className="vd-panel vd-panel--strong" style={{ padding: 18, borderColor: "var(--vd-brass)" }}>
+          <Crown size={22} color="var(--vd-brass)" />
+          <h3 className="vd-h3" style={{ margin: "10px 0" }}>
+            Paid · everything in Free, plus…
+          </h3>
+          <ul className="vd-list">
             {Object.entries(config?.premiumOptLabels ?? {}).map(([k, label]) => (
               <li key={k}>{label as string}</li>
             ))}
-            <li>Every themed world (Mahabharata, Maratha, Greek, Egyptian)</li>
+            <li>The four other settings: Mahabharata, Maratha, Greek, Egyptian</li>
+            <li>Covers {config?.seats ?? 7} people, not just you</li>
           </ul>
         </div>
       </div>

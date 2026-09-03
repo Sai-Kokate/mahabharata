@@ -10,10 +10,11 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import gsap from "gsap";
-import { ArrowRight, BadgeCheck, Crown, LogOut, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Crown, LogOut, Shield, Ticket } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { useAuth } from "./auth";
 import markSrc from "./assets/mark.svg";
+import { prefersReducedMotion, settleWhenUnwatched } from "./motion";
 
 const WORDMARK = "DECEVIA";
 
@@ -45,7 +46,7 @@ export function LandingPage() {
   useLayoutEffect(() => {
     // Anyone who has asked for less motion gets the finished frame, not a
     // slower version of the show.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       setHeroDone(true);
       return;
     }
@@ -69,9 +70,17 @@ export function LandingPage() {
         )
         .from(".lp-line", { scaleX: 0, duration: 0.6 }, "-=0.4")
         .from(".lp-lede", { y: 12, opacity: 0, duration: 0.5 }, "-=0.3")
-        .from(".lp-act--primary", { y: 14, opacity: 0, duration: 0.5 }, "-=0.25")
+        .from(".lp-how > li", { y: 10, opacity: 0, stagger: 0.08, duration: 0.4 }, "-=0.2")
+        .from(".lp-acts", { y: 14, opacity: 0, duration: 0.5 }, "-=0.15")
         .from(".lp-foot", { opacity: 0, duration: 0.5 }, "-=0.2")
         .add(() => setHeroDone(true));
+
+      /* The front page is the one surface where freezing mid-entrance is
+         fatal: `gsap.from` starts every element at opacity 0, so a visitor who
+         opens the link in a BACKGROUND tab — where rAF never fires — came back
+         to a completely blank page, with `heroDone` never set and therefore no
+         account panel or sign-up either. */
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, []);
@@ -79,7 +88,7 @@ export function LandingPage() {
   /** The late arrival, eased in rather than snapped in. */
   useLayoutEffect(() => {
     if (!heroDone || !known) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion() || document.visibilityState === "hidden") return;
     const ctx = gsap.context(() => {
       gsap.from(".lp-late", {
         y: 12, opacity: 0, duration: 0.45, ease: "power3.out",
@@ -106,24 +115,43 @@ export function LandingPage() {
         <hr className="lp-line" />
 
         <p className="lp-lede">
-          A council of five to eighteen. Some of you are sworn to the realm, and
-          some of you are lying about it. Five worlds to find out in.
+          A hidden-roles party game for <strong>5 to 18 people</strong> in the
+          same room, played on your phones. Most of you are on the good team.
+          A few are secretly working against it. Talk, vote, and work out who
+          is lying — before they sink you.
         </p>
 
-        {/* Joining is what most arrivals came to do and needs no account. The
-            second door is Sign up — until you are through it, at which point
-            offering it again is noise, and what you actually want to know is
-            what your account is worth. */}
+        {/* Three lines, because the old front page said what the game FELT
+            like and never what you actually do, so the first real explanation
+            a visitor got was a screen asking them for a code. */}
+        <ol className="lp-how">
+          {/* The content of each step is wrapped, not left loose: `.lp-how > li`
+              is a two-column grid, and a bare `<b>` plus its trailing text
+              would become two separate grid items. */}
+          <li><span><b>One person starts a game</b> and gets a 4-letter code.</span></li>
+          <li><span><b>Everyone else joins</b> with that code, on their own phone.</span></li>
+          <li><span><b>Play five rounds.</b> The app deals the secret roles and keeps score.</span></li>
+        </ol>
+
+        {/* Two doors, and they are the two things a visitor can actually be:
+            the person setting the game up, or the person who was sent a code.
+            The old page offered only "Join the council" — which, with no code
+            to type, was a dead end for anyone arriving on their own. */}
         <div className="lp-acts">
-          <a className="lp-act lp-act--primary" href="/play">
-            Join the council <ArrowRight size={16} />
+          <a className="lp-act lp-act--primary" href="/play?tab=create">
+            Start a new game <ArrowRight size={16} />
           </a>
-          {heroDone && known && !signedIn && (
-            <a className="lp-act lp-late" href="/signin">
-              Sign up <Sparkles size={15} />
-            </a>
-          )}
+          <a className="lp-act" href="/play?tab=join">
+            <Ticket size={15} /> I have a code
+          </a>
         </div>
+
+        {heroDone && known && !signedIn && (
+          <p className="lp-note lp-late">
+            No account needed to play. <a href="/signin">Create one</a> only if
+            you want the extra roles and settings.
+          </p>
+        )}
 
         {heroDone && known && signedIn && viewer && (
           <AccountCard viewer={viewer} config={config} onSignOut={signOut} />
@@ -131,10 +159,10 @@ export function LandingPage() {
 
         <div className="lp-foot">
           <a className="vd-textbtn" href="/learn">
-            How to play
+            New here? See how it plays
           </a>
           <a className="vd-textbtn" href="/rules">
-            Read the laws
+            Full rules
           </a>
         </div>
       </div>
@@ -179,10 +207,10 @@ function AccountCard({
         <span className="lp-account__who">{viewer.name ?? viewer.email}</span>
         {viewer.premium ? (
           <span className="vd-pill vd-pill--brass">
-            <BadgeCheck size={11} /> Premium
+            <BadgeCheck size={13} /> Paid plan
           </span>
         ) : (
-          <span className="vd-pill">Free</span>
+          <span className="vd-pill">Free plan</span>
         )}
       </header>
 
@@ -201,26 +229,29 @@ function AccountCard({
               ) : null}
             </>
           ) : (
-            "Free — everything the printed game needs"
+            "Free — everything you need for a normal game"
           )}
         </dd>
 
-        <dt>Council</dt>
+        <dt>Players</dt>
         <dd>
-          5 to 18 players
+          5 to 18 people
           <div className="lp-account__note">
-            Table size is not part of the paid tier.
+            Free and paid games both seat up to 18.
           </div>
         </dd>
 
-        <dt>Worlds</dt>
+        <dt>Settings</dt>
         <dd>
           {viewer.premium
             ? "All five — Mahabharata, Medieval, Maratha, Greek, Egyptian"
-            : "Medieval"}
+            : "Medieval Kingdom"}
+          <div className="lp-account__note">
+            A setting only renames the characters. The rules never change.
+          </div>
         </dd>
 
-        <dt>Roles &amp; expansions</dt>
+        <dt>Extra roles</dt>
         <dd>
           {viewer.premium ? (
             paidRoles.length > 0
@@ -228,10 +259,11 @@ function AccountCard({
               : "Everything"
           ) : (
             <>
-              Merlin, the Assassin, Percival, Morgana, servants and minions
+              Merlin, the Assassin, Percival, Morgana, and the plain
+              good/evil roles
               <div className="lp-account__note">
-                Mordred, Oberon, Guinevere, the lovers, the Lancelots, the Lady,
-                Excalibur and plot cards are premium.
+                Paid adds Mordred, Oberon, Guinevere, the lovers, the
+                Lancelots, the Lady of the Lake, Excalibur and plot cards.
               </div>
             </>
           )}
@@ -240,15 +272,15 @@ function AccountCard({
 
       <footer className="lp-account__foot">
         <a className="vd-pill" href="/upgrade">
-          <Crown size={11} /> {viewer.premium ? "Manage plan" : "Upgrade"}
+          <Crown size={13} /> {viewer.premium ? "Manage plan" : "See what paid adds"}
         </a>
         {viewer.isAdmin && (
           <a className="vd-pill" href="/admin">
-            <Shield size={11} /> Admin
+            <Shield size={13} /> Admin
           </a>
         )}
         <button className="vd-textbtn" onClick={() => void onSignOut()}>
-          <LogOut size={11} /> Sign out
+          <LogOut size={13} /> Sign out
         </button>
       </footer>
     </section>

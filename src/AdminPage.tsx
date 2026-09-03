@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useAuth } from "./auth";
 import {
-  BadgeCheck, Ban, Check, Clock, Crown, Gift, Loader2, LogOut, RefreshCw,
-  ScrollText, Shield, Trash2, Users, X,
+  ArrowLeft, BadgeCheck, Ban, Check, Clock, Crown, Gift, Loader2, LogOut,
+  RefreshCw, ScrollText, Shield, Trash2, Users, X,
 } from "lucide-react";
 import { api } from "../convex/_generated/api";
 import { SignInCard } from "./SignIn";
+import { Confirm } from "./table/TableShell";
 
 const INR = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const fmtDate = (ms: number) =>
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const viewer = useQuery(api.billing.viewer, {});
   const [tab, setTab] = useState<Tab>("orders");
   const [msg, setMsg] = useState("");
+  const [msgKind, setMsgKind] = useState<"ok" | "error">("ok");
   const [busy, setBusy] = useState(false);
 
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
@@ -32,9 +34,10 @@ export default function AdminPage() {
     setMsg("");
     try {
       await fn();
-      if (ok) setMsg(ok);
+      if (ok) { setMsg(ok); setMsgKind("ok"); }
     } catch (e: any) {
       setMsg(e?.message ?? "Something went wrong.");
+      setMsgKind("error");
     } finally {
       setBusy(false);
     }
@@ -42,9 +45,12 @@ export default function AdminPage() {
 
   if (viewer === undefined) {
     return (
-      <div className="rules-page">
-        <div className="billing-center">
-          <Loader2 size={26} className="billing-spin" />
+      <div className="vd-board">
+        <div className="vd-content vd-center">
+          <p className="vd-loading" role="status">
+            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+            <span>Loading the admin console…</span>
+          </p>
         </div>
       </div>
     );
@@ -52,16 +58,20 @@ export default function AdminPage() {
 
   if (!viewer.signedIn) {
     return (
-      <div className="rules-page">
-        <header className="rules-hero">
-          <a className="rules-back" href="/play">← Back to council</a>
-          <p className="rules-kicker"><Shield size={14} /> Admin</p>
-          <h1>Admin console</h1>
-          <p className="rules-lede">Sign in to continue.</p>
-        </header>
-        <section className="rules-section">
+      <div className="vd-board">
+        <div className="vd-content vd-page">
+          <div className="vd-page__back">
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
+          </div>
+          <header className="vd-page__head">
+            <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+            <h1 className="vd-hero">Admin console</h1>
+            <p className="vd-voice">
+              Sign in with an admin account to manage plans and payments.
+            </p>
+          </header>
           <SignInCard />
-        </section>
+        </div>
       </div>
     );
   }
@@ -69,65 +79,89 @@ export default function AdminPage() {
   // Not an admin: say so plainly rather than pretending the page does not exist.
   if (!viewer.isAdmin) {
     return (
-      <div className="rules-page">
-        <header className="rules-hero">
-          <a className="rules-back" href="/play">← Back to council</a>
-          <p className="rules-kicker"><Shield size={14} /> Admin</p>
-          <h1>Not your console</h1>
-          <p className="rules-lede">
-            <strong>{viewer.email}</strong> is not an admin on this deployment.
-            Admin emails come from the <code>ADMIN_EMAILS</code> Convex
-            environment variable.
-          </p>
-        </header>
-        <section className="rules-section">
-          <button className="btn-ghost-hover billing-btn" onClick={() => void signOut()}>
-            <LogOut size={15} /> Sign out
+      <div className="vd-board">
+        <div className="vd-content vd-page">
+          <div className="vd-page__back">
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
+          </div>
+          <header className="vd-page__head">
+            <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+            <h1 className="vd-hero">You don't have access to this</h1>
+            <p className="vd-voice">
+              <strong>{viewer.email}</strong> isn't an admin account, so there's
+              nothing for you here. If you were expecting access, whoever runs
+              this deployment can add your email to the{" "}
+              <code>ADMIN_EMAILS</code> setting.
+            </p>
+          </header>
+          <button className="vd-pill vd-pill--action" onClick={() => void signOut()}>
+            <LogOut size={13} /> Sign out
           </button>
-        </section>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rules-page">
-      <header className="rules-hero">
-        <a className="rules-back" href="/play">← Back to council</a>
-        <p className="rules-kicker"><Shield size={14} /> Admin</p>
-        <h1>Admin console</h1>
-        <p className="rules-lede">
-          Signed in as <strong>{viewer.email}</strong> ·{" "}
-          <button className="billing-signout" onClick={() => void signOut()}>
-            <LogOut size={12} /> sign out
+    <div className="vd-board">
+      <div className="vd-content vd-page">
+        <div className="vd-page__back">
+          <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
+        </div>
+        <header className="vd-page__head">
+          <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+          <h1 className="vd-hero">Admin console</h1>
+          <p className="vd-voice">
+            Signed in as <strong>{viewer.email}</strong>. Approve payments, edit
+            plans, and see who is covered.
+          </p>
+          <button className="vd-textbtn" onClick={() => void signOut()}>
+            <LogOut size={13} /> Sign out
           </button>
-        </p>
-      </header>
+        </header>
 
-      <Overview />
+        <Overview />
 
-      <div className="admin-tabs">
-        {([
-          ["orders", "Payment requests", Clock],
-          ["subs", "Subscriptions", Crown],
-          ["users", "Users", Users],
-          ["grant", "Grant a plan", Gift],
-        ] as const).map(([id, label, Icon]) => (
-          <button
-            key={id}
-            className={`rules-theme-btn ${tab === id ? "is-on" : ""}`}
-            onClick={() => setTab(id)}
+        <div
+          className="vd-seg"
+          role="tablist"
+          aria-label="Admin sections"
+          style={{ margin: "24px 0" }}
+        >
+          {([
+            ["orders", "Payments to check", Clock],
+            ["subs", "Active plans", Crown],
+            ["users", "Accounts", Users],
+            ["grant", "Give a plan", Gift],
+          ] as const).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              className={tab === id ? "is-active" : undefined}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              onClick={() => setTab(id)}
+            >
+              <Icon size={14} />
+              <span className="vd-seg__label">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {msg && (
+          <p
+            className={`vd-panel ${msgKind === "error" ? "vd-panel--danger vd-errline" : "vd-panel--strong"}`}
+            style={{ margin: "0 0 20px" }}
           >
-            <Icon size={14} /> {label}
-          </button>
-        ))}
+            {msg}
+          </p>
+        )}
+
+        {tab === "orders" && <Orders run={run} busy={busy} />}
+        {tab === "subs" && <Subscriptions run={run} busy={busy} />}
+        {tab === "users" && <UsersList />}
+        {tab === "grant" && <Grant run={run} busy={busy} />}
       </div>
-
-      {msg && <p className="billing-msg">{msg}</p>}
-
-      {tab === "orders" && <Orders run={run} busy={busy} />}
-      {tab === "subs" && <Subscriptions run={run} busy={busy} />}
-      {tab === "users" && <UsersList />}
-      {tab === "grant" && <Grant run={run} busy={busy} />}
     </div>
   );
 }
@@ -138,25 +172,24 @@ function Overview() {
   const o = useQuery(api.billing.adminOverview, {});
   if (!o) return null;
   const tiles: Array<[string, string]> = [
-    ["Pending", String(o.pendingOrders)],
-    ["Live plans", String(o.liveSubscriptions)],
-    ["Seats covered", String(o.seatsCovered)],
+    ["To check", String(o.pendingOrders)],
+    ["Active plans", String(o.liveSubscriptions)],
+    ["People covered", String(o.seatsCovered)],
     ["Approved", String(o.approvedOrders)],
-    ["Collected", INR(o.revenueInr)],
-    ["Users", String(o.users)],
-    ["Open rooms", String(o.openRooms)],
+    ["Money in", INR(o.revenueInr)],
+    ["Accounts", String(o.users)],
+    ["Games open now", String(o.openRooms)],
   ];
   return (
-    <section className="rules-section">
-      <div className="admin-tiles">
-        {tiles.map(([label, value]) => (
-          <div key={label} className="admin-tile">
-            <span className="admin-tile__value">{value}</span>
-            <span className="admin-tile__label">{label}</span>
-          </div>
-        ))}
-      </div>
-    </section>
+    <div className="vd-stats">
+      {tiles.map(([label, value]) => (
+        <div key={label} className="vd-studded vd-panel vd-panel--strong">
+          <span className="vd-stud-b" aria-hidden />
+          <div className="vd-numeral" style={{ fontSize: 28 }}>{value}</div>
+          <div className="vd-label" style={{ marginTop: 6 }}>{label}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -180,96 +213,127 @@ function Orders({
 
   return (
     <>
-      <section className="rules-section">
-        <h2><Clock size={18} /> Awaiting approval ({pending.length})</h2>
+      <section className="vd-page__section">
+        <h2 className="vd-h2 vd-h2--icon">
+          <Clock size={18} /> Payments to check ({pending.length})
+        </h2>
         {pending.length === 0 && (
-          <p className="rules-note">Nothing to review right now.</p>
+          <p className="vd-voice" style={{ marginTop: 12 }}>
+            Nothing waiting. New payment requests will appear here.
+          </p>
         )}
-        {pending.map((o) => (
-          <div key={o._id} className="admin-order">
-            <div className="admin-order__head">
-              <strong>{o.name}</strong>
-              <span className="admin-order__email">{o.email}</span>
-              <span className="billing-badge is-pending">
-                {o.plan} · {INR(o.amountInr)}
-              </span>
-            </div>
-            <dl className="admin-order__facts">
-              <div><dt>Reference</dt><dd><code>{o.paymentRef}</code></dd></div>
-              <div><dt>Submitted</dt><dd>{fmtWhen(o.createdAt)}</dd></div>
-              <div><dt>Seats</dt><dd>{o.seats}</dd></div>
-            </dl>
-            <div className="admin-order__members">
-              <span>Covers:</span>
-              {o.memberEmails.map((e) => (
-                <span key={e} className="rules-chip">{e}</span>
-              ))}
-            </div>
-            {o.note && <p className="admin-order__note">Buyer says: “{o.note}”</p>}
-            <div className="admin-order__actions">
-              <input
-                className="field-input admin-input"
-                placeholder="days (blank = plan length)"
-                value={days[o._id] ?? ""}
-                onChange={(e) => setDays({ ...days, [o._id]: e.target.value })}
-              />
-              <input
-                className="field-input admin-input"
-                placeholder="note (optional)"
-                value={notes[o._id] ?? ""}
-                onChange={(e) => setNotes({ ...notes, [o._id]: e.target.value })}
-              />
-              <button
-                className="btn-approve-hover admin-approve"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => {
-                    const d = Number.parseInt(days[o._id] ?? "", 10);
-                    return approve({
-                      orderId: o._id,
-                      days: Number.isFinite(d) && d > 0 ? d : undefined,
-                      adminNote: notes[o._id]?.trim() || undefined,
-                    });
-                  }, `Activated ${o.seats} seats for ${o.email}.`)
-                }
-              >
-                <Check size={16} /> Approve
-              </button>
-              <button
-                className="btn-reject-hover admin-reject"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () =>
-                      reject({
+        <div className="vd-stack" style={{ marginTop: 16 }}>
+          {pending.map((o) => (
+            <div key={o._id} className="vd-studded vd-panel vd-panel--strong vd-stack">
+              <span className="vd-stud-b" aria-hidden />
+              <div className="vd-row" style={{ justifyContent: "space-between" }}>
+                <strong className="vd-h3">{o.name}</strong>
+                <span className="vd-pill vd-pill--brass">
+                  {o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}
+                </span>
+              </div>
+              <span className="vd-label vd-label--dim">{o.email}</span>
+
+              <div className="vd-row" style={{ gap: 20, marginTop: 4 }}>
+                <div>
+                  <div className="vd-label">Payment reference</div>
+                  <code style={{ fontSize: 13 }}>{o.paymentRef}</code>
+                </div>
+                <div>
+                  <div className="vd-label">Submitted</div>
+                  <span style={{ fontSize: 13 }}>{fmtWhen(o.createdAt)}</span>
+                </div>
+                <div>
+                  <div className="vd-label">People covered</div>
+                  <span style={{ fontSize: 13 }}>{o.seats}</span>
+                </div>
+              </div>
+
+              <div className="vd-row" style={{ marginTop: 4 }}>
+                <span className="vd-label">Covers these emails</span>
+                {o.memberEmails.map((e: string) => (
+                  <span key={e} className="vd-pill">{e}</span>
+                ))}
+              </div>
+
+              {o.note && (
+                <p className="vd-voice" style={{ margin: 0 }}>They added: &ldquo;{o.note}&rdquo;</p>
+              )}
+
+              <div className="vd-row" style={{ marginTop: 8 }}>
+                <input
+                  className="vd-field"
+                  style={{ maxWidth: 200, marginBottom: 0 }}
+                  inputMode="numeric"
+                  placeholder="Days (leave blank for the full plan)"
+                  value={days[o._id] ?? ""}
+                  onChange={(e) => setDays({ ...days, [o._id]: e.target.value })}
+                />
+                <input
+                  className="vd-field"
+                  style={{ maxWidth: 220, marginBottom: 0 }}
+                  placeholder="Note for them (optional)"
+                  value={notes[o._id] ?? ""}
+                  onChange={(e) => setNotes({ ...notes, [o._id]: e.target.value })}
+                />
+                <button
+                  className="vd-pill vd-pill--parchment vd-pill--action"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => {
+                      const d = Number.parseInt(days[o._id] ?? "", 10);
+                      return approve({
                         orderId: o._id,
+                        days: Number.isFinite(d) && d > 0 ? d : undefined,
                         adminNote: notes[o._id]?.trim() || undefined,
-                      }),
-                    `Rejected ${o.email}'s request.`,
-                  )
-                }
-              >
-                <X size={16} /> Reject
-              </button>
+                      });
+                    }, `Done — ${o.seats} people on ${o.email}'s plan now have the paid features.`)
+                  }
+                >
+                  <Check size={14} /> Approve and switch it on
+                </button>
+                <Confirm
+                  className="vd-pill vd-pill--danger vd-pill--action"
+                  icon={<X size={14} />}
+                  label="Reject"
+                  ask={`Reject ${o.email}'s payment request? They'll be able to submit a new one.`}
+                  disabled={busy}
+                  danger
+                  onConfirm={() =>
+                    run(
+                      () =>
+                        reject({
+                          orderId: o._id,
+                          adminNote: notes[o._id]?.trim() || undefined,
+                        }),
+                      `Rejected. ${o.email} can submit a new request.`,
+                    )
+                  }
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       {done.length > 0 && (
-        <section className="rules-section">
-          <h2><ScrollText size={18} /> History</h2>
-          <div className="rules-map">
-            <div className="rules-map__head">
+        <section className="vd-page__section">
+          <h2 className="vd-h2 vd-h2--icon">
+            <ScrollText size={18} /> Already dealt with
+          </h2>
+          <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
+            <div className="vd-rowlist__head">
               <span>When</span><span>Who</span><span>Status</span>
             </div>
             {done.map((o) => (
-              <div key={o._id} className="rules-map__row">
-                <span className="rules-map__base">{fmtDate(o.createdAt)}</span>
-                <span className="rules-map__themed">
-                  {o.email} · {o.plan} · {INR(o.amountInr)}
+              <div key={o._id} className="vd-rowlist__row">
+                <span>{fmtDate(o.createdAt)}</span>
+                <span>{o.email} · {o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}</span>
+                <span
+                  className={`vd-pill ${o.status === "approved" ? "vd-pill--parchment" : "vd-pill--danger"}`}
+                >
+                  {o.status === "approved" ? "Approved" : "Rejected"}
                 </span>
-                <span className={`billing-badge is-${o.status}`}>{o.status}</span>
               </div>
             ))}
           </div>
@@ -296,121 +360,134 @@ function Subscriptions({
   if (!subs) return <Loading />;
   if (subs.length === 0) {
     return (
-      <section className="rules-section">
-        <p className="rules-note">No subscriptions yet.</p>
+      <section className="vd-page__section">
+        <p className="vd-voice">
+          No plans yet. Once you approve a payment, or give someone a plan, it
+          will show up here.
+        </p>
       </section>
     );
   }
 
   return (
-    <section className="rules-section">
-      <h2><Crown size={18} /> Subscriptions ({subs.length})</h2>
-      {subs.map((s) => {
-        const draft = drafts[s._id] ?? s.members.join(", ");
-        return (
-          <div key={s._id} className="admin-order">
-            <div className="admin-order__head">
-              <strong>{s.ownerEmail}</strong>
-              <span className={`billing-badge is-${s.live ? "approved" : "rejected"}`}>
-                {s.live ? "live" : s.status}
+    <section className="vd-page__section">
+      <h2 className="vd-h2 vd-h2--icon">
+        <Crown size={18} /> Active plans ({subs.length})
+      </h2>
+      <div className="vd-stack" style={{ marginTop: 16 }}>
+        {subs.map((s) => {
+          const draft = drafts[s._id] ?? s.members.join(", ");
+          return (
+            <div key={s._id} className="vd-studded vd-panel vd-panel--strong vd-stack">
+              <span className="vd-stud-b" aria-hidden />
+              <div className="vd-row" style={{ justifyContent: "space-between" }}>
+                <strong className="vd-h3">{s.ownerEmail}</strong>
+                <span className={`vd-pill ${s.live ? "vd-pill--parchment" : "vd-pill--danger"}`}>
+                  {s.live ? "Active" : s.status === "revoked" ? "Revoked" : "Expired"}
+                </span>
+              </div>
+              <span className="vd-label">
+                {s.plan === "yearly" ? "Yearly" : "Monthly"} · covers {s.seats} people ·
+                runs out {fmtDate(s.expiresAt)}
               </span>
-              <span className="admin-order__email">
-                {s.plan} · {s.seats} seats · expires {fmtDate(s.expiresAt)}
-              </span>
-            </div>
-            {s.adminNote && (
-              <p className="admin-order__note">Note: “{s.adminNote}”</p>
-            )}
-            <div className="admin-order__members">
-              <span>{s.members.length}/{s.seats} seats used</span>
-              {s.members.map((e) => (
-                <span key={e} className="rules-chip">{e}</span>
-              ))}
-            </div>
-            <label className="field-label">Covered emails (comma separated)</label>
-            <input
-              className="field-input"
-              value={draft}
-              onChange={(e) => setDrafts({ ...drafts, [s._id]: e.target.value })}
-            />
-            <div className="admin-order__actions">
-              <button
-                className="btn-ghost-hover admin-btn"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () =>
-                      setSeats({
-                        subscriptionId: s._id,
-                        emails: draft.split(",").map((e) => e.trim()).filter(Boolean),
-                      }),
-                    "Seats updated.",
-                  )
-                }
-              >
-                <Check size={15} /> Save seats
-              </button>
-              <button
-                className="btn-ghost-hover admin-btn"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () =>
-                      setStatus({
-                        subscriptionId: s._id,
-                        status: "active",
-                        expiresAt: Math.max(Date.now(), s.expiresAt) + 30 * 86400_000,
-                      }),
-                    "Extended by 30 days.",
-                  )
-                }
-              >
-                <RefreshCw size={15} /> +30 days
-              </button>
-              {s.status === "active" ? (
-                <button
-                  className="btn-reject-hover admin-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(
-                      () => setStatus({ subscriptionId: s._id, status: "revoked" }),
-                      "Revoked.",
-                    )
-                  }
-                >
-                  <Ban size={15} /> Revoke
-                </button>
-              ) : (
-                <button
-                  className="btn-approve-hover admin-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(
-                      () => setStatus({ subscriptionId: s._id, status: "active" }),
-                      "Reactivated.",
-                    )
-                  }
-                >
-                  <BadgeCheck size={15} /> Reactivate
-                </button>
+              {s.adminNote && (
+                <p className="vd-voice" style={{ margin: 0 }}>Your note: &ldquo;{s.adminNote}&rdquo;</p>
               )}
-              <button
-                className="btn-reject-hover admin-btn"
-                disabled={busy}
-                onClick={() => {
-                  if (!window.confirm(`Permanently delete ${s.ownerEmail}'s plan and all its seats?`)) return;
-                  void run(
-                    () => del({ subscriptionId: s._id }),
-                    "Subscription deleted.",
-                  );
-                }}
-              >
-                <Trash2 size={15} /> Delete
-              </button>
+              <div className="vd-row">
+                <span className="vd-label">{s.members.length} of {s.seats} places used</span>
+                {s.members.map((e: string) => (
+                  <span key={e} className="vd-pill">{e}</span>
+                ))}
+              </div>
+              <label className="vd-field__label">Who this plan covers</label>
+              <input
+                className="vd-field"
+                value={draft}
+                aria-describedby={`members-help-${s._id}`}
+                onChange={(e) => setDrafts({ ...drafts, [s._id]: e.target.value })}
+              />
+              <span className="vd-hint" id={`members-help-${s._id}`}>
+                Email addresses, separated by commas.
+              </span>
+              <div className="vd-row">
+                <button
+                  className="vd-pill vd-pill--action"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        setSeats({
+                          subscriptionId: s._id,
+                          emails: draft.split(",").map((e) => e.trim()).filter(Boolean),
+                        }),
+                      "Saved.",
+                    )
+                  }
+                >
+                  <Check size={14} /> Save this list
+                </button>
+                <button
+                  className="vd-pill vd-pill--action"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        setStatus({
+                          subscriptionId: s._id,
+                          status: "active",
+                          expiresAt: Math.max(Date.now(), s.expiresAt) + 30 * 86400_000,
+                        }),
+                      "Added 30 days to this plan.",
+                    )
+                  }
+                >
+                  <RefreshCw size={14} /> Add 30 days
+                </button>
+                {s.status === "active" ? (
+                  <Confirm
+                    className="vd-pill vd-pill--danger vd-pill--action"
+                    icon={<Ban size={14} />}
+                    label="Turn off"
+                    ask={`Turn off ${s.ownerEmail}'s plan now? Everyone on it loses the paid features immediately. You can switch it back on afterwards.`}
+                    disabled={busy}
+                    danger
+                    onConfirm={() =>
+                      run(
+                        () => setStatus({ subscriptionId: s._id, status: "revoked" }),
+                        "Turned off. You can switch it back on from this page.",
+                      )
+                    }
+                  />
+                ) : (
+                  <button
+                    className="vd-pill vd-pill--parchment vd-pill--action"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(
+                        () => setStatus({ subscriptionId: s._id, status: "active" }),
+                        "Turned back on.",
+                      )
+                    }
+                  >
+                    <BadgeCheck size={14} /> Turn back on
+                  </button>
+                )}
+                <Confirm
+                  className="vd-pill vd-pill--danger vd-pill--action"
+                  icon={<Trash2 size={14} />}
+                  label="Delete for good"
+                  ask={`Permanently delete ${s.ownerEmail}'s plan and everyone on it? This cannot be undone — use "Turn off" if you might want it back.`}
+                  disabled={busy}
+                  danger
+                  onConfirm={() =>
+                    run(() => del({ subscriptionId: s._id }), "Deleted.")
+                  }
+                />
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -421,21 +498,23 @@ function UsersList() {
   const users = useQuery(api.billing.adminUsers, {});
   if (!users) return <Loading />;
   return (
-    <section className="rules-section">
-      <h2><Users size={18} /> Users ({users.length})</h2>
-      <div className="rules-map">
-        <div className="rules-map__head">
-          <span>Joined</span><span>Account</span><span>Tier</span>
+    <section className="vd-page__section">
+      <h2 className="vd-h2 vd-h2--icon">
+        <Users size={18} /> Accounts ({users.length})
+      </h2>
+      <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
+        <div className="vd-rowlist__head">
+          <span>Signed up</span><span>Account</span><span>Plan</span>
         </div>
         {users.map((u) => (
-          <div key={u._id} className="rules-map__row">
-            <span className="rules-map__base">{fmtDate(u.joinedAt)}</span>
-            <span className="rules-map__themed">
+          <div key={u._id} className="vd-rowlist__row">
+            <span>{fmtDate(u.joinedAt)}</span>
+            <span>
               {u.name ? `${u.name} · ` : ""}{u.email ?? "no email"}
               {u.isAdmin && " · admin"}
             </span>
-            <span className={`billing-badge is-${u.premium ? "approved" : "pending"}`}>
-              {u.premium ? "premium" : "free"}
+            <span className={`vd-pill ${u.premium ? "vd-pill--parchment" : ""}`}>
+              {u.premium ? "Paid" : "Free"}
             </span>
           </div>
         ))}
@@ -461,57 +540,82 @@ function Grant({
   const [note, setNote] = useState("");
 
   return (
-    <section className="rules-section">
-      <h2><Gift size={18} /> Grant a plan directly</h2>
-      <p className="rules-note">
-        For comps, testing, or a payment you took outside the app. The person
-        must have created an account at least once, so the account exists.
+    <section className="vd-page__section">
+      <h2 className="vd-h2 vd-h2--icon">
+        <Gift size={18} /> Give someone a plan
+      </h2>
+      <p className="vd-voice" style={{ marginTop: 8 }}>
+        Use this for free plans, testing, or a payment you took some other way.
+        The person needs to have signed up at least once, so their account
+        already exists.
       </p>
-      <label className="field-label">Owner email</label>
+
+      <label className="vd-field__label" style={{ marginTop: 20, display: "block" }} htmlFor="grant-owner">
+        Whose plan is it?
+      </label>
       <input
-        className="field-input"
+        id="grant-owner"
+        className="vd-field"
         placeholder="someone@example.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <label className="field-label">Also cover (comma separated, optional)</label>
+      <label className="vd-field__label" style={{ display: "block" }} htmlFor="grant-others">
+        Anyone else it should cover (optional)
+      </label>
       <input
-        className="field-input"
-        placeholder="a@x.com, b@y.com"
+        id="grant-others"
+        className="vd-field"
+        placeholder="a@example.com, b@example.com"
         value={emails}
         onChange={(e) => setEmails(e.target.value)}
+        aria-describedby="grant-others-help"
       />
-      <div className="admin-order__actions">
+      <span className="vd-hint" id="grant-others-help">
+        Email addresses, separated by commas.
+      </span>
+
+      <div className="vd-row">
         <select
-          className="field-input admin-input"
+          className="vd-field"
+          style={{ maxWidth: 160 }}
           value={plan}
           onChange={(e) => setPlan(e.target.value as "monthly" | "yearly")}
         >
-          <option value="monthly">monthly</option>
-          <option value="yearly">yearly</option>
+          <option value="monthly">Monthly plan</option>
+          <option value="yearly">Yearly plan</option>
         </select>
         <input
-          className="field-input admin-input"
-          placeholder="days (optional)"
+          className="vd-field"
+          style={{ maxWidth: 160 }}
+          inputMode="numeric"
+          placeholder="Days (optional)"
           value={days}
           onChange={(e) => setDays(e.target.value)}
         />
         <input
-          className="field-input admin-input"
-          placeholder="seats (optional)"
+          className="vd-field"
+          style={{ maxWidth: 160 }}
+          inputMode="numeric"
+          placeholder="People (optional)"
           value={seats}
           onChange={(e) => setSeats(e.target.value)}
         />
       </div>
-      <label className="field-label">Note (optional)</label>
+
+      <label className="vd-field__label" style={{ display: "block" }} htmlFor="grant-note">
+        Note to yourself (optional)
+      </label>
       <input
-        className="field-input"
-        placeholder="why this was granted"
+        id="grant-note"
+        className="vd-field"
+        placeholder="e.g. competition winner"
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
+
       <button
-        className="btn-gold-hover billing-btn"
+        className="vd-btn vd-btn--primary"
         disabled={busy || email.trim().length < 5}
         onClick={() =>
           void run(() => {
@@ -525,19 +629,25 @@ function Grant({
               memberEmails: emails.split(",").map((e) => e.trim()).filter(Boolean),
               adminNote: note.trim() || undefined,
             });
-          }, `Granted a ${plan} plan to ${email.trim()}.`)
+          }, `Done — ${email.trim()} now has a ${plan} plan.`)
         }
       >
-        <Gift size={15} /> Grant plan
+        <span>
+          {email.trim().length < 5 ? "Enter an email address first" : "Give them the plan"}
+        </span>
+        <Gift size={16} />
       </button>
     </section>
   );
 }
 
-function Loading() {
+function Loading({ what = "Loading\u2026" }: { what?: string }) {
   return (
-    <div className="billing-center">
-      <Loader2 size={22} className="billing-spin" />
+    <div className="vd-center" style={{ minHeight: 200 }}>
+      <p className="vd-loading" role="status">
+        <Loader2 size={22} className="vd-spin" color="var(--vd-brass)" />
+        <span>{what}</span>
+      </p>
     </div>
   );
 }

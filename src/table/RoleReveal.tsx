@@ -12,9 +12,9 @@
    ========================================================================== */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { NamePlate } from "./Parts";
+import { NamePlate, RoleBrief } from "./Parts";
 import type { Room } from "./types";
 
 const HOLD_MS = 400;
@@ -60,7 +60,32 @@ export function useHold(delay = HOLD_MS) {
     };
   }, [end, clear]);
 
-  return { held, start, end };
+  /**
+   * A keyboard-activated button fires `click`, never `pointerdown`/`pointerup`
+   * — so a keyboard-only or switch-access user could never trigger the hold
+   * at all, meaning they could never see their own role. Enter/Space now
+   * start and end the same hold; `e.repeat` (the browser auto-repeating a
+   * held key) is ignored so the timer doesn't keep resetting.
+   */
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      if (e.repeat) return;
+      clear();
+      timer.current = window.setTimeout(() => setHeld(true), delay);
+    },
+    [clear, delay],
+  );
+  const onKeyUp = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      end();
+    },
+    [end],
+  );
+
+  return { held, start, end, onKeyDown, onKeyUp };
 }
 
 export function RoleReveal({
@@ -69,7 +94,7 @@ export function RoleReveal({
   room: Room;
   theme: { goodTeamName: string; evilTeamName: string };
 }) {
-  const { held, start, end } = useHold();
+  const { held, start, end, onKeyDown, onKeyUp } = useHold();
   const me = room.me;
 
   // Watchers hold nothing, so there is nothing to offer them.
@@ -86,10 +111,13 @@ export function RoleReveal({
         onPointerDown={start}
         onPointerUp={end}
         onPointerCancel={end}
+        onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onBlur={end}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {held ? <Eye size={12} /> : <EyeOff size={12} />}
-        {held ? "Release to hide" : "Hold to see your lot"}
+        {held ? <Eye size={14} /> : <EyeOff size={14} />}
+        {held ? "Let go to hide" : "Show my role"}
       </button>
 
       {held && (
@@ -98,14 +126,15 @@ export function RoleReveal({
             <span className="vd-stud-b" aria-hidden />
             <div className="vd-role__side">
               {evil
-                ? `Sworn against · ${theme.evilTeamName}`
-                : `Sworn to · ${theme.goodTeamName}`}
+                ? `You are EVIL · ${theme.evilTeamName}`
+                : `You are GOOD · ${theme.goodTeamName}`}
             </div>
             <div className="vd-role__name">{roleDef?.name ?? "—"}</div>
-            <p className="vd-voice" style={{ margin: 0 }}>{roleDef?.desc}</p>
+            <RoleBrief room={room} />
+            <p className="vd-lore" style={{ marginTop: 14 }}>{roleDef?.desc}</p>
 
             <div style={{ marginTop: 14 }}>
-              <span className="vd-label vd-label--dim">
+              <span className="vd-label">
                 {roleDef?.knowledgeLabel ?? "You are shown nothing."}
               </span>
               {me.known.length > 0 && (
