@@ -274,7 +274,15 @@ export function Plate({
       }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      // Mount hands focus to `el` itself, which matches neither `first` nor
+      // `last` — without this branch, a Shift+Tab on the very first keypress
+      // fell through to the browser's native backward walk, landing on
+      // whatever precedes the overlay in the document (the topbar, the
+      // shellbar) instead of staying trapped.
+      if (document.activeElement === el) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {

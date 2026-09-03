@@ -12,7 +12,7 @@
    host's plan.
    ========================================================================== */
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import {
   Check, Copy, Crown, Flame, Lock, Sparkles, Sun, Swords, Users, X,
 } from "lucide-react";
@@ -153,7 +153,7 @@ export function LobbyScreen({
             const lock = locked(o.key);
             const full = !on && !fits(o);
             return (
-              <Fragment key={o.key}>
+              <div key={o.key} style={{ display: "flex", flexDirection: "column" }}>
                 <button
                   className={`vd-opt vd-opt--${o.side} ${on ? "is-on" : ""}`}
                   disabled={!isHost || lock || full}
@@ -181,7 +181,7 @@ export function LobbyScreen({
                     {lock ? "Premium — upgrade to unlock" : "No seat left on that side"}
                   </p>
                 )}
-              </Fragment>
+              </div>
             );
           })}
         </div>
