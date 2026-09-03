@@ -120,7 +120,9 @@ export function RoleReveal({
         onContextMenu={(e) => e.preventDefault()}
       >
         {held ? <Eye size={14} /> : <EyeOff size={14} />}
-        {held ? "Let go to hide" : "Show my role"}
+        <span className="vd-mylot__label">
+          {held ? "Let go to hide" : "Show my role"}
+        </span>
       </button>
 
       {held && (

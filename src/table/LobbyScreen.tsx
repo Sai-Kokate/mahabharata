@@ -21,7 +21,7 @@ import {
 } from "../../convex/logic";
 import { CharacterCard } from "../CharacterCard";
 import { characterFor } from "../characters";
-import { ChronicleColumn, SeatRing } from "./Parts";
+import { SeatRing } from "./Parts";
 import { ActionLine, Confirm } from "./TableShell";
 import { type Room, type TableProps } from "./types";
 
@@ -542,8 +542,6 @@ export function LobbyScreen({
             <Crown size={16} />
           </a>
         )}
-
-        <ChronicleColumn room={room} />
       </div>
     </div>
 

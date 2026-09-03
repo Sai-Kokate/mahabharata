@@ -1,57 +1,15 @@
 /* ============================================================================
-   Shared pieces: the clock fuse, the quest ladder, the rejection track, the
-   chronicle, and the overlay plate. All flat — no animation, no glow.
+   Shared pieces: the quest ladder, the chronicle, and the overlay plate. All
+   flat — no animation, no glow.
+
+   `ClockFuse` (a 52px numeral, a caption and fifteen ticks) and
+   `RejectionTrack` (dots under a sentence explaining them) both left when the
+   gameplay screens stopped having a column to put them in: the clock is a
+   readout in the bar with a hairline under it, and the rejection dots are part
+   of `StatusStrip`.
    ========================================================================== */
 
-import { useEffect, useRef, useState } from "react";
-
-/* ---------------------------------------------------------------- clock --- */
-
-/**
- * The clock is a number plus a fuse of flat ticks. It never animates: it
- * re-renders once a second and ticks go dark in whole steps, which reads as
- * urgency without motion.
- */
-export function ClockFuse({
-  endsAt,
-  totalMs,
-  ticks = 15,
-  caption = "talk it over — then 1 minute to pick",
-}: { endsAt: number; totalMs: number; ticks?: number; caption?: string }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const remaining = Math.max(0, endsAt - now);
-  const mm = Math.floor(remaining / 60000);
-  const ss = Math.floor((remaining % 60000) / 1000);
-  const lit = Math.ceil((remaining / totalMs) * ticks);
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <div className="vd-clock" role="timer" aria-live="off">
-          {mm}:{String(ss).padStart(2, "0")}
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div className="vd-label">Time left</div>
-          {caption && (
-            <div style={{ marginTop: 7, font: "400 13px/1.35 var(--vd-ui)", color: "var(--vd-ink-soft)" }}>
-              {caption}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="vd-fuse" style={{ marginTop: 13 }} aria-hidden>
-        {Array.from({ length: ticks }, (_, i) => (
-          <i key={i} className={i < lit ? "is-lit" : undefined} />
-        ))}
-      </div>
-    </div>
-  );
-}
+import { useEffect, useRef } from "react";
 
 /* -------------------------------------------------------- quest ladder --- */
 
@@ -77,9 +35,6 @@ export function QuestLadder({
   return (
     <div>
       <div className="vd-label">The five missions</div>
-      <p className="vd-hint" style={{ marginTop: 4 }}>
-        The small number is how many people go on that mission.
-      </p>
       <div className="vd-seg" style={{ marginTop: 12 }}>
         {sizes.map((size, i) => {
           const result = results[i];
@@ -137,31 +92,6 @@ export function QuestLadder({
   );
 }
 
-/* ----------------------------------------------------- rejection track --- */
-
-export function RejectionTrack({ used, max = 5 }: { used: number; max?: number }) {
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span className="vd-label">Teams voted down</span>
-        <span style={{ font: "700 12.5px/1 var(--vd-ui)", color: "var(--vd-red-ink)" }}>
-          {used} of {max}
-        </span>
-      </div>
-      <div className="vd-track" style={{ marginTop: 11 }} aria-label={`${used} of ${max} teams voted down`}>
-        {Array.from({ length: max }, (_, i) => (
-          <i key={i} className={i < used ? "is-used" : undefined} />
-        ))}
-      </div>
-      <p className="vd-hint">
-        {used >= max - 1
-          ? "One more rejection and evil wins outright."
-          : `If ${max} teams in a row are voted down, evil wins.`}
-      </p>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------ chronicle --- */
 
 export type ChronicleEntry = {
@@ -181,11 +111,9 @@ export type ChronicleEntry = {
 export function Chronicle({ entries }: { entries: ChronicleEntry[] }) {
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span className="vd-label">What's happened so far</span>
-        <span className="vd-rule vd-rule--brass" style={{ flex: 1 }} />
-      </div>
-      <div style={{ marginTop: 16 }}>
+      {/* No heading of its own any more. This was a column with a title; it is
+          now the second half of the ⓘ sheet, which titles it. */}
+      <div>
         {entries.map((e) => (
           <div className="vd-chron__entry" key={e.n}>
             <span className="vd-chron__n">{String(e.n).padStart(2, "0")}</span>

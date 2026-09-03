@@ -5,12 +5,18 @@
    good may only succeed — unless the room turned on the `goodMayFail` house
    rule — and the Evil Lancelot may only fail. The result is anonymous by
    design — the count of fails, never the hands.
+
+   Gone: the mission and ledger columns; a red panel announcing that this
+   mission needs two fails, which the strip now carries as three words; two
+   action lines restating the bar; and two of the three trailing hints. The
+   third stayed — the one that explains why a button is greyed out is not
+   tutorial copy, it is the only account of a disabled control.
    ========================================================================== */
 
 import { Check, Eye, Sword, X } from "lucide-react";
 import { Plate } from "../TableParts";
-import { QuestColumn, ChronicleColumn, SeatRing } from "./Parts";
-import { ActionLine, Waiting } from "./TableShell";
+import { SeatRing } from "./Parts";
+import { StatusStrip } from "./StatusStrip";
 import { Riders } from "./ProposeScreen";
 import { type TableProps, nameOf } from "./types";
 
@@ -25,99 +31,52 @@ export function QuestScreen({
   const canSucceed = allowed.includes("success");
   const canFail = allowed.includes("fail");
   const forced = allowed.length === 1;
+  const myTurn = onTeam && !played;
 
   return (
-    <div className="vd-table vd-table-layout">
-      <QuestColumn room={room} />
+    <div className="vd-play">
+      <StatusStrip room={room} />
+      <Riders room={room} />
 
-      <div className="vd-centre">
-        <div className="vd-centre__wide">
-          <Riders room={room} />
-        </div>
-
-        <SeatRing
-          room={room}
-          emblemSrc={emblemSrc}
-          stateFor={(p) => (room.proposedTeam.includes(p.playerId) ? "named" : "idle")}
-          noteFor={(p) => (room.proposedTeam.includes(p.playerId) ? "On the team" : undefined)}
-        />
-
-        <div className="vd-centre__wide vd-actionbar">
-          {room.failsNeeded > 1 && (
-            <div className="vd-panel vd-panel--danger" style={{ marginBottom: 12 }}>
-              <p className="vd-voice" style={{ margin: 0, color: "var(--vd-red-ink)" }}>
-                Mission {room.questIndex + 1} needs <b>two Fail cards</b> to
-                fail. A single Fail is not enough this round.
-              </p>
-            </div>
-          )}
-
-          {!onTeam ? (
-            <>
-              <ActionLine
-                label="The team is playing their cards"
-                value={`${room.questProgress.submitted} of ${room.questProgress.total} in`}
-              />
-              <Waiting>
-                You're not on this mission, so you have no card to play. You'll
-                see how many Fails came back — never who played them.
-              </Waiting>
-            </>
-          ) : played ? (
-            <>
-              <ActionLine label="Your card is in" value={`${room.questProgress.submitted} of ${room.questProgress.total} in`} />
-              <Waiting>
-                Your card is face down with the rest. Waiting for{" "}
-                {room.questProgress.total - room.questProgress.submitted}{" "}
-                {room.questProgress.total - room.questProgress.submitted === 1 ? "other" : "others"}.
-              </Waiting>
-            </>
-          ) : (
-            <>
-              <ActionLine label="Play one card" />
-              <div className="vd-cards">
-                <button
-                  className="vd-card vd-card--success"
-                  disabled={!canSucceed}
-                  onClick={act(() => onCard("success"))}
-                >
-                  <Check size={20} />
-                  <span className="vd-card__name">Succeed</span>
-                  <span className="vd-card__note">Help this mission work</span>
-                </button>
-                <button
-                  className="vd-card vd-card--fail"
-                  disabled={!canFail}
-                  onClick={act(() => onCard("fail"))}
-                >
-                  <X size={20} />
-                  <span className="vd-card__name">Fail</span>
-                  <span className="vd-card__note">Secretly sabotage it</span>
-                </button>
-              </div>
-              {forced ? (
-                <p className="vd-hint">
-                  {canFail
-                    ? "Your role gives you no choice — you must play Fail."
-                    : "Good players can only play Succeed, so Fail is greyed out for you."}
-                </p>
-              ) : room.opts.goodMayFail ? (
-                <p className="vd-hint">
-                  House rule is on: good players may play Fail too, so a Fail
-                  card doesn't prove anyone is evil.
-                </p>
-              ) : (
-                <p className="vd-hint">
-                  Nobody ever learns which card came from which person — only
-                  how many Fails there were.
-                </p>
-              )}
-            </>
+      {myTurn && (
+        <div className="vd-actionbar">
+          <div className="vd-cards">
+            <button
+              className="vd-card vd-card--success"
+              disabled={!canSucceed}
+              onClick={act(() => onCard("success"))}
+            >
+              <Check size={20} />
+              <span className="vd-card__name">Succeed</span>
+              <span className="vd-card__note">Help this mission work</span>
+            </button>
+            <button
+              className="vd-card vd-card--fail"
+              disabled={!canFail}
+              onClick={act(() => onCard("fail"))}
+            >
+              <X size={20} />
+              <span className="vd-card__name">Fail</span>
+              <span className="vd-card__note">Secretly sabotage it</span>
+            </button>
+          </div>
+          {/* Only when one of the two above is greyed out. */}
+          {forced && (
+            <p className="vd-hint">
+              {canFail
+                ? "Your role gives you no choice — you must play Fail."
+                : "Your role can only play Succeed."}
+            </p>
           )}
         </div>
-      </div>
+      )}
 
-      <ChronicleColumn room={room} />
+      <SeatRing
+        room={room}
+        emblemSrc={emblemSrc}
+        stateFor={(p) => (room.proposedTeam.includes(p.playerId) ? "named" : "idle")}
+        noteFor={(p) => (room.proposedTeam.includes(p.playerId) ? "On the team" : undefined)}
+      />
     </div>
   );
 }
@@ -148,10 +107,12 @@ export function ExcaliburScreen({
           </button>
         }
       >
-        <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          Every card is face down. This is the last moment to play an Ambush
-          card, if you're holding one.
-        </p>
+        {/* Only says this where an Ambush card can actually exist. */}
+        {room.opts.plots === true && (
+          <p className="vd-hint" style={{ textAlign: "center", marginTop: 12 }}>
+            Last moment to play an Ambush card.
+          </p>
+        )}
       </Plate>
     );
   }
@@ -159,9 +120,8 @@ export function ExcaliburScreen({
   if (!mine) {
     return (
       <Plate eyebrow="Excalibur" title={nameOf(room, holderId)}>
-        <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          {nameOf(room, holderId)} is deciding whether to flip one team
-          member's card. Nothing for you to do — this only takes a moment.
+        <p className="vd-hint" style={{ marginTop: 12, textAlign: "center" }}>
+          Deciding whether to flip a card. This only takes a moment.
         </p>
       </Plate>
     );
@@ -173,14 +133,10 @@ export function ExcaliburScreen({
       title="Flip somebody's card?"
       action={
         <button className="vd-btn" onClick={act(() => onUse(undefined))}>
-          <span>Don't use it — leave every card as it is</span>
+          <span>Leave every card as it is</span>
         </button>
       }
     >
-      <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-        Pick a team member to turn their Succeed into a Fail, or their Fail into
-        a Succeed.
-      </p>
       <div className="vd-stack vd-stack--tight" style={{ marginTop: 16 }}>
         {room.proposedTeam
           .filter((id) => id !== pid)
@@ -190,9 +146,9 @@ export function ExcaliburScreen({
             </button>
           ))}
       </div>
+      {/* Public vs private is what makes this a decision, so it stays. */}
       <p className="vd-hint" style={{ textAlign: "center" }}>
-        Everyone will see <b>who</b> you picked. Only you and they will ever
-        know which card it was.
+        Everyone sees who you picked, never which card.
       </p>
     </Plate>
   );
@@ -222,10 +178,10 @@ export function QuestResultPlate({
           <span key={i} className={`vd-back ${failed ? "is-fail" : ""}`} />
         ))}
       </div>
-      <p className="vd-voice" style={{ marginTop: 16, textAlign: "center" }}>
+      <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
         {q.fails === 0
-          ? "Every card played was a Succeed."
-          : `${q.fails} Fail card${q.fails === 1 ? "" : "s"} came back out of ${q.size}. Who played ${q.fails === 1 ? "it" : "them"} stays secret.`}
+          ? "Every card was a Succeed."
+          : `${q.fails} of ${q.size} came back Fail.`}
       </p>
       {(q.revealed ?? []).length > 0 && (
         <div className="vd-stack vd-stack--tight" style={{ marginTop: 14 }}>
