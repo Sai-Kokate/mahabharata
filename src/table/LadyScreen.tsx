@@ -23,10 +23,8 @@ export function LadyScreen({
   if (!mine) {
     return (
       <Plate eyebrow={ladyName} title={nameOf(room, holderId)}>
-        <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-          {nameOf(room, holderId)} is picking one player to inspect. Only they
-          will be told the answer — and they're free to lie about it
-          afterwards.
+        <p className="vd-hint" style={{ marginTop: 12, textAlign: "center" }}>
+          Picking one player to inspect. Only they see the answer.
         </p>
       </Plate>
     );
@@ -34,9 +32,9 @@ export function LadyScreen({
 
   return (
     <Plate eyebrow={ladyName} title="Choose someone to inspect">
-      <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-        You'll privately learn whether they're good or evil. Nobody else is
-        told. The power then passes to whoever you pick.
+      {/* Both halves of this change WHO you should pick, so both stay. */}
+      <p className="vd-voice" style={{ marginTop: 12, textAlign: "center" }}>
+        You alone learn their side — and the power passes to whoever you pick.
       </p>
       <div className="vd-grid2" style={{ marginTop: 18 }}>
         {room.players
@@ -58,10 +56,6 @@ export function LadyScreen({
             );
           })}
       </div>
-      <p className="vd-hint" style={{ textAlign: "center" }}>
-        Greyed-out names have held this power before, so they can never be
-        inspected.
-      </p>
     </Plate>
   );
 }

@@ -3,13 +3,19 @@
 
    Three quests held means good has almost won. The assassin still names Merlin,
    and if the lovers are in play may name the pair instead.
+
+   One column, and one job: the face you are hunting, the names, the button.
+   Gone: a second copy of the mission ladder, the ledger column, a paragraph
+   restating what the bar says, "Tap a name to choose them" for a grid of
+   names, and "Get it right and evil wins" under a button that already reads
+   "Lock in Bee".
    ========================================================================== */
 
 import { useState } from "react";
 import { Flame } from "lucide-react";
-import { QuestLadder } from "../TableParts";
-import { QUEST_SIZES, doubleFailQuests } from "../../convex/logic";
-import { ChronicleColumn } from "./Parts";
+import { CharacterCard } from "../CharacterCard";
+import { characterFor } from "../characters";
+import { StatusStrip } from "./StatusStrip";
 import { ActionLine } from "./TableShell";
 import type { TableProps } from "./types";
 
@@ -25,7 +31,8 @@ export function AssassinScreen({
 
   const roleName = (id: string) =>
     room.theme.roles.find((r) => r.id === id)?.name ?? id;
-  const n = room.players.length;
+  const merlin = characterFor(room.theme, "merlin");
+  const teams = { good: room.theme.goodTeamName, evil: room.theme.evilTeamName };
 
   const candidates = room.players.filter((p) => p.playerId !== pid);
   const needTwo = mode === "lovers" && loversInPlay;
@@ -39,109 +46,99 @@ export function AssassinScreen({
   };
 
   return (
-    <div className="vd-table vd-table-layout">
-      <div className="vd-stack">
-        <div className="vd-label">Three missions succeeded</div>
-        <p className="vd-voice">
-          The {theme.goodTeamName} have nearly won — but the evil team gets one
-          last chance. If they correctly guess who {roleName("merlin")} is,
-          evil wins the whole game instead.
-        </p>
-        <QuestLadder
-          sizes={QUEST_SIZES[n] ?? []}
-          questIndex={room.questIndex}
-          results={room.questResults}
-          doubleFail={doubleFailQuests(n)}
-          log={room.questLog ?? []}
-        />
-      </div>
+    <div className="vd-play">
+      <StatusStrip room={room} />
 
-      <div className="vd-centre">
-        {!amAssassin ? (
-          <div className="vd-centre__wide vd-studded vd-panel vd-panel--danger">
-            <span className="vd-stud-b" aria-hidden />
-            <div className="vd-label" style={{ color: "var(--vd-red-ink)" }}>
-              The evil team is guessing
-            </div>
-            <p className="vd-voice" style={{ marginTop: 12 }}>
-              Somebody in this room is choosing who they think{" "}
-              {roleName("merlin")} is. Nothing you do now can change the
-              outcome — just wait.
-            </p>
-          </div>
-        ) : (
-          <div className="vd-centre__wide vd-stack">
-            {loversInPlay && (
-              <div className="vd-seg">
-                <button
-                  className={mode === "merlin" ? "is-active" : undefined}
-                  onClick={() => { setMode("merlin"); setPicks([]); }}
-                >
-                  <span className="vd-seg__label">
-                    Guess {roleName("merlin")}
-                  </span>
-                </button>
-                <button
-                  className={mode === "lovers" ? "is-active" : undefined}
-                  onClick={() => { setMode("lovers"); setPicks([]); }}
-                >
-                  <span className="vd-seg__label">Guess the two lovers</span>
-                </button>
+      {!amAssassin ? (
+        <div className="vd-panel vd-panel--danger">
+          <span className="vd-label" style={{ color: "var(--vd-red-ink)" }}>
+            The evil team is guessing
+          </span>
+          <p className="vd-hint" style={{ marginTop: 6 }}>
+            Nothing you do now changes the outcome.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Who you are hunting, with a face on it. */}
+          <div className="cc-row">
+            {merlin && (
+              <div className="cc-row__card">
+                <CharacterCard
+                  character={merlin}
+                  size="sm"
+                  mode="static"
+                  teams={teams}
+                  hideNote
+                />
               </div>
             )}
-
-            <ActionLine
-              label={needTwo ? "Pick both lovers" : `Pick who you think is ${roleName("merlin")}`}
-              value={needTwo ? `${picks.length} of 2 chosen` : `${picks.length} of 1 chosen`}
-            />
-            <p className="vd-hint" style={{ margin: "0 0 8px" }}>
-              Tap a name to choose them. This is your only guess.
-            </p>
-
-            <div className="vd-grid3">
-              {candidates.map((p) => {
-                const on = picks.includes(p.playerId);
-                return (
-                  <button
-                    key={p.playerId}
-                    className={`vd-tile vd-tile--btn ${on ? "vd-tile--evil" : ""}`}
-                    onClick={() => toggle(p.playerId)}
-                  >
-                    <span className="vd-tile__seat">{p.seat + 1}</span>
-                    {p.name}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="vd-actionbar">
-              <button
-                className="vd-btn vd-btn--danger"
-                disabled={!ready}
-                onClick={act(() =>
-                  onStrike(needTwo ? "lovers" : "merlin", picks[0], picks[1]),
-                )}
-              >
-                <span>
-                  {!ready
-                    ? `Choose ${needTwo ? 2 - picks.length : 1} more`
-                    : needTwo
-                      ? "Lock in both names"
-                      : `Lock in ${room.players.find((p) => p.playerId === picks[0])?.name ?? "this name"}`}
-                </span>
-                <Flame size={16} />
-              </button>
-              <p className="vd-hint">
-                {needTwo
-                  ? "Get both right and evil wins. Get either one wrong and good wins."
-                  : "Get it right and evil wins the game. Get it wrong and good wins."}
+            <div className="cc-row__body">
+              <span className="vd-label">Your target</span>
+              <p className="vd-voice" style={{ margin: "4px 0 0" }}>
+                Name the player you think is {roleName("merlin")}. Get it right
+                and the {theme.evilTeamName} win.
               </p>
             </div>
           </div>
-        )}
-      </div>
 
-      <ChronicleColumn room={room} />
+          {loversInPlay && (
+            <div className="vd-seg">
+              <button
+                className={mode === "merlin" ? "is-active" : undefined}
+                onClick={() => { setMode("merlin"); setPicks([]); }}
+              >
+                <span className="vd-seg__label">Guess {roleName("merlin")}</span>
+              </button>
+              <button
+                className={mode === "lovers" ? "is-active" : undefined}
+                onClick={() => { setMode("lovers"); setPicks([]); }}
+              >
+                <span className="vd-seg__label">Guess the two lovers</span>
+              </button>
+            </div>
+          )}
+
+          {/* Only in lovers mode, where the button's label cannot carry the
+              count on its own. */}
+          {needTwo && <ActionLine label="Pick both" value={`${picks.length} of 2`} />}
+
+          <div className="vd-grid3">
+            {candidates.map((p) => {
+              const on = picks.includes(p.playerId);
+              return (
+                <button
+                  key={p.playerId}
+                  className={`vd-tile vd-tile--btn ${on ? "vd-tile--evil" : ""}`}
+                  onClick={() => toggle(p.playerId)}
+                >
+                  <span className="vd-tile__seat">{p.seat + 1}</span>
+                  {p.name}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="vd-actionbar">
+            <button
+              className="vd-btn vd-btn--danger"
+              disabled={!ready}
+              onClick={act(() =>
+                onStrike(needTwo ? "lovers" : "merlin", picks[0], picks[1]),
+              )}
+            >
+              <span>
+                {!ready
+                  ? `Choose ${needTwo ? 2 - picks.length : 1} more`
+                  : needTwo
+                    ? "Lock in both names"
+                    : `Lock in ${room.players.find((p) => p.playerId === picks[0])?.name ?? "this name"}`}
+              </span>
+              <Flame size={16} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -148,14 +148,6 @@
 }
 .vd-hint--warn { color: var(--vd-red-ink); }
 
-.vd-clock {
-  font: 500 52px/1 var(--vd-display);
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--vd-ink);
-}
-@media (max-width: 720px) { .vd-clock { font-size: 38px; } }
-
 /* ============================================================================
    Rules, panels, corner studs
    ========================================================================== */
@@ -263,17 +255,6 @@
 .vd-seg > button:hover:not(.is-active) { color: var(--vd-ink); background: #1c1813; }
 .vd-seg > .is-active { background: var(--vd-brass); color: #171410; }
 .vd-seg > *:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: -2px; }
-
-/* Tick fuse — the clock, the vote counter, cards-in. Flat, no animation. */
-.vd-fuse { display: flex; gap: 4px; }
-.vd-fuse > i { flex: 1; height: 5px; background: #2c2721; }
-.vd-fuse > i.is-lit { background: var(--vd-brass); }
-.vd-fuse > i.is-spent { background: var(--vd-red); }
-
-/* Rejection track */
-.vd-track { display: flex; gap: 4px; }
-.vd-track > i { flex: 1; height: 4px; background: #2c2721; }
-.vd-track > i.is-used { background: var(--vd-red); }
 
 /* ============================================================================
    The council seal
@@ -837,20 +818,227 @@
 .vd-shell { display: flex; flex-direction: column; min-height: 100dvh; padding: 22px 36px 0; }
 @media (max-width: 720px) { .vd-shell { padding: 14px 16px 0; } }
 
-.vd-topbar {
+/* ----------------------------------------------------------------- bar ----
+   What the wordmark, the world's name, the plan badge, the rules link and the
+   sign-in button used to occupy. Two things are left in reach: the code people
+   read out, and where the game is. Everything else is behind ⓘ or ⋯.
+   ------------------------------------------------------------------------- */
+
+.vd-bar {
+  position: relative;
   display: flex; align-items: center; justify-content: space-between;
-  gap: var(--vd-4); flex-wrap: wrap;
-  padding-bottom: 15px; border-bottom: 1px solid var(--vd-rule-container);
+  gap: var(--vd-3); flex-wrap: wrap;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--vd-rule-container);
 }
-.vd-topbar__left { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.vd-topbar__emblem { mix-blend-mode: screen; opacity: 0.8; }
-.vd-topbar__brand { font: 500 15px/1 var(--vd-display); letter-spacing: 0.2em; color: var(--vd-ink); }
-.vd-topbar__theme {
-  margin-left: 10px; padding-left: 12px;
+.vd-bar__left,
+.vd-bar__right { display: flex; align-items: center; gap: var(--vd-3); min-width: 0; }
+.vd-bar__emblem { flex: none; mix-blend-mode: screen; opacity: 0.8; }
+.vd-bar__code {
+  font: 500 16px/1 var(--vd-display);
+  letter-spacing: 0.18em;
+  color: var(--vd-ink);
+}
+.vd-bar__where {
+  padding-left: var(--vd-3);
   border-left: 1px solid var(--vd-rule-container);
-  font: 500 13.5px/1.2 var(--vd-ui); color: var(--vd-ink-muted);
+  font: 700 var(--vd-t-label)/1.2 var(--vd-ui);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vd-ink-muted);
 }
-.vd-topbar__right { display: flex; align-items: center; gap: var(--vd-4); flex-wrap: wrap; }
+.vd-bar__clock {
+  font: 500 17px/1 var(--vd-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--vd-brass);
+}
+/* The old clock was a 52px numeral, a caption and fifteen ticks. This is the
+   same countdown as one hairline along the bar it belongs to. */
+.vd-bar__fuse {
+  position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--vd-rule-structure);
+}
+.vd-bar__fuse > i { display: block; height: 100%; background: var(--vd-brass); }
+
+/* Kept for the app header outside the table (App.tsx). */
+.vd-topbar__emblem { mix-blend-mode: screen; opacity: 0.8; }
+
+.vd-iconbtn {
+  display: inline-grid; place-items: center;
+  width: 42px; height: 42px;
+  border: 1px solid var(--vd-rule-control);
+  color: var(--vd-ink-muted);
+}
+.vd-iconbtn:hover { border-color: var(--vd-brass); color: var(--vd-brass); }
+.vd-iconbtn:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: 2px; }
+
+/* ----------------------------------------------------------------- menu --- */
+
+.vd-menu { position: relative; }
+.vd-menu__panel {
+  position: absolute; top: calc(100% + 9px); right: 0; z-index: 50;
+  display: flex; flex-direction: column;
+  min-width: 252px; max-width: min(320px, calc(100vw - 28px));
+  padding: 6px;
+  border: 1px solid var(--vd-rule-strong);
+  background: var(--vd-bg-plate);
+}
+.vd-menu__item {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 42px; padding: 0 10px;
+  font: 500 14px/1.3 var(--vd-ui);
+  color: var(--vd-ink-muted);
+  text-decoration: none;
+}
+.vd-menu__item > svg { flex: none; }
+.vd-menu__item:hover:not(.is-static) { background: var(--vd-bg-raised); color: var(--vd-ink); }
+.vd-menu__item:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: -2px; }
+.vd-menu__item.is-static { color: var(--vd-brass); cursor: default; }
+.vd-menu__sep { height: 1px; margin: 5px 2px; background: var(--vd-rule-container); }
+/* The two-tap ask, asked inside the menu. */
+.vd-menu__panel .vd-confirm { padding: 8px 10px; }
+.vd-menu__panel .vd-confirm__ask { font-size: 13px; line-height: 1.4; }
+
+/* ---------------------------------------------------------------- sheet --- */
+
+.vd-sheet {
+  position: fixed; inset: 0; z-index: 70;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(10, 9, 8, 0.82);
+}
+.vd-sheet__panel {
+  display: flex; flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 86dvh;
+  border: 1px solid var(--vd-rule-strong);
+  border-bottom: 0;
+  background: var(--vd-bg-plate);
+}
+.vd-sheet__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--vd-3);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--vd-rule-container);
+}
+.vd-sheet__panel > .vd-sheet__head { padding: 15px 16px 12px; }
+.vd-sheet__close {
+  display: inline-grid; place-items: center;
+  width: 38px; height: 38px; color: var(--vd-ink-muted);
+}
+.vd-sheet__close:hover { color: var(--vd-brass); }
+.vd-sheet__body {
+  display: flex; flex-direction: column; gap: var(--vd-4);
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.vd-sheet__rule {
+  margin: 0; padding-top: var(--vd-3);
+  border-top: 1px solid var(--vd-rule-structure);
+}
+@media (min-width: 720px) {
+  .vd-sheet { align-items: center; padding: var(--vd-6); }
+  .vd-sheet__panel { max-height: 80dvh; border-bottom: 1px solid var(--vd-rule-strong); }
+}
+
+.vd-facts { display: grid; grid-template-columns: auto 1fr; gap: 7px var(--vd-4); margin: 0; }
+.vd-facts dt {
+  font: 700 var(--vd-t-label)/1.4 var(--vd-ui);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vd-ink-dim);
+}
+.vd-facts dd { margin: 0; font: 400 var(--vd-t-sm)/1.45 var(--vd-ui); color: var(--vd-ink); }
+
+/* ----------------------------------------------------------------- play ---
+   One column for a turn of the game, at every width. The 288 | 1fr | 274 board
+   lost two of its three columns — one to `StatusStrip`, one to the ⓘ sheet —
+   and a single centred column is what is left. Desktop and phone are now the
+   same screen rather than two designs.
+   ------------------------------------------------------------------------- */
+
+.vd-shell.is-play .vd-banner,
+.vd-shell.is-play .vd-alert,
+.vd-shell.is-play .vd-errline {
+  width: 100%; max-width: 520px; margin-inline: auto;
+}
+
+.vd-play {
+  display: flex; flex-direction: column;
+  gap: var(--vd-5);
+  width: 100%; max-width: 520px;
+  margin-inline: auto;
+  padding: var(--vd-5) 0 var(--vd-8);
+}
+.vd-play > * { min-width: 0; }
+/* A seat token is centred ON the ring, so the one at twelve o'clock hangs
+   half its height above the seal's own box — into the strip's bottom rule
+   without this. */
+.vd-play > .vd-seal { max-width: 420px; margin: 22px auto 0; }
+@media (max-width: 720px) { .vd-play { gap: var(--vd-4); padding: var(--vd-4) 0 var(--vd-6); } }
+
+/* --------------------------------------------------------------- strip ----
+   Where the game is, in one row: the five missions, how many teams have been
+   voted down, and — only in the rounds where it is true — that this one needs
+   two fails. It replaces four stacked blocks, three of which sat under a
+   sentence explaining them.
+   ------------------------------------------------------------------------- */
+
+.vd-strip {
+  display: flex; align-items: center; gap: var(--vd-4); flex-wrap: wrap;
+  padding: 9px 0;
+  border-top: 1px solid var(--vd-rule-structure);
+  border-bottom: 1px solid var(--vd-rule-structure);
+}
+.vd-strip__ladder { display: flex; gap: 5px; }
+.vd-slot {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 34px; padding: 4px 5px;
+  border: 1px solid var(--vd-rule-control);
+}
+.vd-slot__n { font: 500 12px/1 var(--vd-display); color: var(--vd-ink-dim); }
+.vd-slot__v { font: 700 11.5px/1 var(--vd-ui); color: var(--vd-ink-muted); }
+.vd-slot.is-active { background: var(--vd-parchment); border-color: var(--vd-brass-edge); }
+.vd-slot.is-active .vd-slot__n { color: #171410; }
+.vd-slot.is-active .vd-slot__v { color: rgba(23, 20, 16, 0.7); }
+.vd-slot.is-held { border-color: var(--vd-brass-edge); }
+.vd-slot.is-held .vd-slot__v { color: var(--vd-ink); }
+.vd-slot.is-fail { border-color: var(--vd-red-rule); }
+.vd-slot.is-fail .vd-slot__v { color: var(--vd-red-ink); }
+.vd-slot__dbl {
+  position: absolute; top: 2px; right: 2px;
+  width: 4px; height: 4px; background: var(--vd-red);
+}
+.vd-strip__rejects { display: flex; gap: 3px; width: 66px; margin-left: auto; }
+.vd-strip__rejects > i { flex: 1; height: 4px; background: #2c2721; }
+.vd-strip__rejects > i.is-used { background: var(--vd-red); }
+.vd-strip__warn {
+  font: 700 var(--vd-t-label)/1.2 var(--vd-ui);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vd-red-ink);
+}
+
+/* --------------------------------------------------------------- riders --- */
+
+.vd-riders { display: flex; align-items: baseline; gap: var(--vd-3); flex-wrap: wrap; }
+.vd-riders__list { display: flex; gap: 6px; flex-wrap: wrap; }
+.vd-rider {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid var(--vd-brass-edge);
+  background: var(--vd-parchment);
+  color: #171410;
+  font: 600 13px/1.2 var(--vd-ui);
+  text-transform: capitalize;
+}
+.vd-rider > svg { flex: none; opacity: 0.65; }
+
+/* On a phone the bar has to hold the code, where you are, and three controls.
+   The emblem is the one thing there that answers no question. */
+@media (max-width: 560px) {
+  .vd-bar__emblem { display: none; }
+  .vd-bar__whereword { display: none; }
+  .vd-mylot__label { display: none; }
+  .vd-mylot { width: 42px; padding: 0; justify-content: center; }
+}
 
 /* An error is the text a stuck player needs most, so it is not the smallest
    thing on screen. Paired with .vd-panel--danger's red rule; .vd-okline is the
@@ -1252,25 +1440,9 @@ body { background: var(--vd-bg); }
   min-width: 0;
 }
 .vd-banner__text b, .vd-banner__text strong { font-weight: 800; color: var(--vd-ink); }
-/* A second, quieter line for the rule behind the instruction. */
-.vd-banner__sub {
-  display: block;
-  margin-top: 3px;
-  font: 400 13.5px/1.45 var(--vd-ui);
-  color: var(--vd-ink-soft);
-}
 .vd-banner.is-urgent { border-color: var(--vd-brass); background: rgba(194, 165, 95, 0.08); }
 .vd-banner.is-urgent .vd-banner__mark { background: var(--vd-brass); }
 
-/* Restart / close / leave. Quiet by design — they sit under the banner and are
-   never the thing your thumb lands on. */
-.vd-shellbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--vd-4);
-  margin-top: 11px;
-}
 .vd-confirm { display: inline-flex; align-items: center; gap: var(--vd-3); flex-wrap: wrap; }
 .vd-confirm__ask {
   font: 600 14px/1.35 var(--vd-ui);

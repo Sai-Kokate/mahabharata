@@ -1,111 +1,18 @@
 /* ============================================================================
-   Pieces shared by more than one phase: the left-hand quest column, the
-   chronicle, and the room → CouncilSeal seat mapping.
+   Pieces shared by more than one phase: the room → CouncilSeal seat mapping,
+   what you are trying to do, and a parchment name plate.
+
+   The two columns that used to live here are gone. `QuestColumn` was 288px of
+   mission plate, ladder, rejection track and win conditions, three of them
+   under a sentence explaining them — it is now one row, `StatusStrip`.
+   `ChronicleColumn` was a permanent 274px ledger nobody reads mid-turn; it is
+   the second half of the ⓘ sheet, `GameInfo`.
    ========================================================================== */
 
 import { useMemo } from "react";
 import { CouncilSeal, type Seat, type SeatState } from "../CouncilSeal";
-import { QuestLadder, RejectionTrack, Chronicle, type ChronicleEntry } from "../TableParts";
 import { dealSigils } from "../sigils";
-import { QUEST_SIZES, doubleFailQuests } from "../../convex/logic";
-import { type Room, displayName, partySize } from "./types";
-
-/** Quest numeral + ladder + rejection track + the oath. */
-export function QuestColumn({ room }: { room: Room }) {
-  const n = room.players.length;
-  const sizes = QUEST_SIZES[n] ?? [];
-  const doubleFail = doubleFailQuests(n);
-
-  return (
-    <div className="vd-stack">
-      <div className="vd-studded vd-panel vd-panel--strong">
-        <span className="vd-stud-b" aria-hidden />
-        <div className="vd-label">Mission</div>
-        <div className="vd-numeral" style={{ fontSize: 44, marginTop: 6 }}>
-          {room.questIndex >= 0 ? `${room.questIndex + 1} of 5` : "—"}
-        </div>
-        <div className="vd-label" style={{ marginTop: 8 }}>
-          {partySize(room)} people go
-        </div>
-        <p className="vd-hint" style={{ marginTop: 6 }}>
-          {room.failsNeeded === 1
-            ? "One Fail card is enough to fail this mission."
-            : `${room.failsNeeded} Fail cards are needed to fail this one.`}
-        </p>
-      </div>
-
-      <QuestLadder
-        sizes={sizes}
-        questIndex={room.questIndex}
-        results={room.questResults}
-        doubleFail={doubleFail}
-        log={room.questLog ?? []}
-      />
-
-      <RejectionTrack used={room.rejectCount} max={room.maxRejects} />
-
-      <p className="vd-voice">
-        <b>Good wins</b> if three missions succeed. <b>Evil wins</b> if three
-        fail — or if five teams in a row get voted down.
-      </p>
-    </div>
-  );
-}
-
-/** The ledger. Built from what the table publicly knows — never from roles. */
-export function ChronicleColumn({ room }: { room: Room }) {
-  const entries = useMemo<ChronicleEntry[]>(() => {
-    const out: ChronicleEntry[] = [];
-    room.questResults.forEach((r, i) => {
-      if (!r) return;
-      // The count for this quest, if it was ridden since the log was added.
-      // `?? []` guards the window where the client is live but the Convex
-      // functions carrying `questLog` have not been deployed yet.
-      const q = (room.questLog ?? []).find((x) => x.questIndex === i);
-      out.push({
-        n: i + 1,
-        text: `Mission ${i + 1} ${r === "success" ? "succeeded" : "failed"}.`,
-        // How many of each card came back, which is what the table argues over
-        // afterwards. `questResults` only ever said held or fell.
-        tally: q
-          ? { successes: q.successes, fails: q.fails, size: q.size, failsNeeded: q.failsNeeded }
-          : undefined,
-        outcome: {
-          label: r === "success" ? "Succeeded" : "Failed",
-          detail: q ? `${q.successes}–${q.fails}` : undefined,
-          held: r === "success",
-        },
-      });
-    });
-    if (room.lastVote) {
-      const nameOfId = (id: string) =>
-        room.players.find((p) => p.playerId === id)?.name ?? "someone";
-      out.push({
-        n: out.length + 1,
-        sides: {
-          for: room.lastVote.approvers.map(nameOfId),
-          against: room.lastVote.rejecters.map(nameOfId),
-        },
-        text: room.lastVote.overturnedBy
-          ? "The table approved the team, then a plot card cancelled it."
-          : room.lastVote.approved
-            ? "The table approved the team."
-            : "The table voted the team down.",
-        outcome: {
-          label: room.lastVote.approved && !room.lastVote.overturnedBy ? "Approved" : "Voted down",
-          detail: `${room.lastVote.approvers.length}–${room.lastVote.rejecters.length}`,
-          held: room.lastVote.approved && !room.lastVote.overturnedBy,
-        },
-      });
-    }
-    if (out.length === 0) {
-      out.push({ n: 1, text: "Nothing has happened yet — the first team hasn't been picked." });
-    }
-    return out;
-  }, [room.questResults, room.questLog, room.lastVote, room.players]);
-
-  return <Chronicle entries={entries} />;
-}
+import { type Room, displayName } from "./types";
 
 /**
  * Map the room onto the seal. `stateFor` decides each seat's state so one
