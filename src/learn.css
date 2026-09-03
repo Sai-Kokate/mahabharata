@@ -23,7 +23,10 @@
 }
 .lx-lede {
   margin: var(--vd-4) 0 0;
-  font: italic 400 17px/1.6 var(--vd-voice);
+  /* This is the paragraph that explains the whole game to a stranger. It was
+     italic serif, which is the wrong dress for the most load-bearing sentence
+     on the page. */
+  font: 400 17px/1.6 var(--vd-ui);
   color: var(--vd-ink-soft);
 }
 .lx-jump {
@@ -38,11 +41,12 @@
   gap: 6px;
   padding: 7px 13px;
   border: 1px solid var(--vd-rule-control);
-  font: 700 8.5px/1 var(--vd-ui);
-  letter-spacing: 0.2em;
+  min-height: 44px;
+  font: 700 var(--vd-t-label)/1.3 var(--vd-ui);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  color: var(--vd-ink-dim);
+  color: var(--vd-ink-muted);
 }
 .lx-jump a:hover { border-color: var(--vd-brass); color: var(--vd-brass); }
 
@@ -61,13 +65,13 @@
 }
 .lx-section__head p {
   margin: var(--vd-3) 0 0;
-  font: italic 400 15px/1.55 var(--vd-voice);
-  color: var(--vd-ink-muted);
+  font: 400 15px/1.6 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 .lx-foot {
   margin: var(--vd-5) 0 0;
-  font: italic 400 14px/1.55 var(--vd-voice);
-  color: var(--vd-ink-dim);
+  font: 400 14.5px/1.6 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 
 /* ---------------------------------------------------------- the chooser -- */
@@ -89,11 +93,11 @@
 }
 .lx-pick:hover { border-color: var(--vd-brass-edge); }
 .lx-pick.is-on { border-color: var(--vd-brass); background: var(--vd-bg-raised); }
-.lx-pick__name { font: 500 15px/1.2 var(--vd-display); color: var(--vd-ink); }
+.lx-pick__name { font: 700 15px/1.25 var(--vd-ui); color: var(--vd-ink); }
 .lx-pick.is-on .lx-pick__name { color: var(--vd-brass); }
 .lx-pick__blurb {
-  font: italic 400 13px/1.4 var(--vd-voice);
-  color: var(--vd-ink-dim);
+  font: 400 13px/1.45 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 
 /* ----------------------------------------------------------------- stage -- */
@@ -118,8 +122,8 @@
 }
 .lx-note {
   margin: var(--vd-2) 0 0;
-  font: italic 400 15px/1.5 var(--vd-voice);
-  color: var(--vd-ink-dim);
+  font: 400 15px/1.55 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 .lx-stamp { align-self: flex-start; }
 
@@ -147,8 +151,8 @@
   -webkit-backface-visibility: hidden;
   border: 1px solid var(--vd-rule-strong);
   background: var(--vd-bg-plate);
-  font: 700 8px/1 var(--vd-ui);
-  letter-spacing: 0.18em;
+  font: 700 var(--vd-t-label)/1.3 var(--vd-ui);
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 .lx-card__face--back::after {
@@ -199,7 +203,9 @@
   padding: 9px 0;
   border: 1px solid var(--vd-rule-control);
   font: 500 14px/1 var(--vd-display);
-  color: var(--vd-rule-engraved);
+  /* Was --vd-rule-engraved, a border colour: the numbers of the missions not
+     yet played were effectively invisible. */
+  color: var(--vd-ink-dim);
 }
 .lx-track__q.is-success {
   border-color: var(--vd-brass);
@@ -238,25 +244,36 @@
   background: none;
   border: 1px solid var(--vd-brass);
   color: var(--vd-brass);
-  font: 700 8.5px/1 var(--vd-ui);
-  letter-spacing: 0.2em;
+  font: 700 13px/1.2 var(--vd-ui);
+  letter-spacing: 0.02em;
+  min-height: 44px;
   text-transform: uppercase;
   cursor: pointer;
 }
 .lx-play:hover { background: var(--vd-brass); color: var(--vd-bg); }
 
-.lx-beats { display: flex; gap: 5px; flex: 1; min-width: 90px; }
-.lx-beat {
+.lx-beats {
+  display: flex;
+  flex-wrap: wrap;               /* ten markers in a 375px row is 14px each */
+  gap: 5px;
   flex: 1;
-  height: 4px;
-  min-width: 10px;
-  padding: 0;
-  background: var(--vd-rule-control);
+  min-width: 90px;
+  align-items: center;
+}
+.lx-beat {
+  flex: 1 0 28px;
+  height: 28px;
+  padding: 12px 0;               /* the bar is still 4px; the target is 28px */
+  background: none;
   border: 0;
   cursor: pointer;
+  background-clip: content-box;
+  background-color: var(--vd-rule-control);
 }
-.lx-beat.is-done { background: var(--vd-brass-edge); }
-.lx-beat.is-on { background: var(--vd-brass); }
+.lx-beat:hover { background-color: var(--vd-ink-dim); }
+.lx-beat:focus-visible { outline: 2px solid var(--vd-brass); outline-offset: 1px; }
+.lx-beat.is-done { background-color: var(--vd-brass-edge); }
+.lx-beat.is-on { background-color: var(--vd-brass); }
 
 /* --------------------------------------------------------------- matrix -- */
 
@@ -271,12 +288,12 @@
 }
 .lx-matrix__head {
   border-bottom: 1px solid var(--vd-rule-structure);
-  font: 700 8.5px/1 var(--vd-ui);
-  letter-spacing: 0.2em;
+  font: 700 var(--vd-t-label)/1.3 var(--vd-ui);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--vd-ink-dim);
 }
-.lx-matrix__row { border-top: 1px solid var(--vd-rule-structure); font: 400 14px/1 var(--vd-ui); }
+.lx-matrix__row { border-top: 1px solid var(--vd-rule-structure); font: 400 14px/1.3 var(--vd-ui); }
 .lx-matrix__row:first-of-type { border-top: 0; }
 .lx-matrix__row span { display: inline-flex; align-items: center; gap: 6px; color: var(--vd-ink-soft); }
 .lx-matrix__n { font: 500 17px/1 var(--vd-display) !important; color: var(--vd-ink) !important; }
@@ -299,8 +316,8 @@
   padding: 11px 0;
   border-bottom: 1px solid var(--vd-rule-structure);
 }
-.lx-night__n { font: 500 17px/1 var(--vd-display); color: var(--vd-rule-engraved); min-width: 20px; }
-.lx-night__label { font: italic 400 16px/1.4 var(--vd-voice); color: var(--vd-ink-soft); }
+.lx-night__n { font: 500 17px/1 var(--vd-display); color: var(--vd-brass); min-width: 20px; }
+.lx-night__label { font: 400 15px/1.5 var(--vd-ui); color: var(--vd-ink-soft); }
 
 /* ----------------------------------------------------------------- cast -- */
 
@@ -323,8 +340,8 @@
 .lx-role h3 { margin: 0; font: 500 18px/1.1 var(--vd-display); color: var(--vd-ink); }
 .lx-role__desc {
   margin: 0;
-  font: italic 400 13.5px/1.5 var(--vd-voice);
-  color: var(--vd-ink-dim);
+  font: 400 13.5px/1.55 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 .lx-role__sees {
   display: flex;
@@ -374,7 +391,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--vd-rule-control);
-  font: 500 11px/1 var(--vd-display);
+  font: 500 12px/1 var(--vd-display);
   color: var(--vd-brass);
 }
 
@@ -399,14 +416,14 @@
 .lx-plot h3 { margin: 0; font: 500 17px/1.15 var(--vd-display); }
 .lx-plot p {
   margin: var(--vd-2) 0 0;
-  font: italic 400 13.5px/1.5 var(--vd-voice);
-  color: var(--vd-ink-dim);
+  font: 400 13.5px/1.55 var(--vd-ui);
+  color: var(--vd-ink-soft);
 }
 .lx-plot__when {
   display: inline-block;
   margin-top: var(--vd-3);
-  font: 700 8px/1 var(--vd-ui);
-  letter-spacing: 0.18em;
+  font: 700 var(--vd-t-label)/1.3 var(--vd-ui);
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--vd-ink-dim);
 }

@@ -41,10 +41,11 @@ export function AssassinScreen({
   return (
     <div className="vd-table vd-table-layout">
       <div className="vd-stack">
-        <div className="vd-label vd-label--dim">Three quests held</div>
+        <div className="vd-label">Three missions succeeded</div>
         <p className="vd-voice">
-          The {theme.goodTeamName} have all but won. One knife is still owed —
-          name {roleName("merlin")} and it all turns over.
+          The {theme.goodTeamName} have nearly won — but the evil team gets one
+          last chance. If they correctly guess who {roleName("merlin")} is,
+          evil wins the whole game instead.
         </p>
         <QuestLadder
           sizes={QUEST_SIZES[n] ?? []}
@@ -60,11 +61,12 @@ export function AssassinScreen({
           <div className="vd-centre__wide vd-studded vd-panel vd-panel--danger">
             <span className="vd-stud-b" aria-hidden />
             <div className="vd-label" style={{ color: "var(--vd-red-ink)" }}>
-              The knife is out
+              The evil team is guessing
             </div>
             <p className="vd-voice" style={{ marginTop: 12 }}>
-              Somewhere in this room the Assassin is choosing. Nothing you do now
-              changes it.
+              Somebody in this room is choosing who they think{" "}
+              {roleName("merlin")} is. Nothing you do now can change the
+              outcome — just wait.
             </p>
           </div>
         ) : (
@@ -75,23 +77,26 @@ export function AssassinScreen({
                   className={mode === "merlin" ? "is-active" : undefined}
                   onClick={() => { setMode("merlin"); setPicks([]); }}
                 >
-                  <span className="vd-label" style={{ color: "inherit" }}>
-                    Name {roleName("merlin")}
+                  <span className="vd-seg__label">
+                    Guess {roleName("merlin")}
                   </span>
                 </button>
                 <button
                   className={mode === "lovers" ? "is-active" : undefined}
                   onClick={() => { setMode("lovers"); setPicks([]); }}
                 >
-                  <span className="vd-label" style={{ color: "inherit" }}>Name the lovers</span>
+                  <span className="vd-seg__label">Guess the two lovers</span>
                 </button>
               </div>
             )}
 
             <ActionLine
-              label={needTwo ? "Name both lovers" : `Name ${roleName("merlin")}`}
-              value={needTwo ? `${picks.length} of 2` : undefined}
+              label={needTwo ? "Pick both lovers" : `Pick who you think is ${roleName("merlin")}`}
+              value={needTwo ? `${picks.length} of 2 chosen` : `${picks.length} of 1 chosen`}
             />
+            <p className="vd-hint" style={{ margin: "0 0 8px" }}>
+              Tap a name to choose them. This is your only guess.
+            </p>
 
             <div className="vd-grid3">
               {candidates.map((p) => {
@@ -117,14 +122,20 @@ export function AssassinScreen({
                   onStrike(needTwo ? "lovers" : "merlin", picks[0], picks[1]),
                 )}
               >
-                <span>{needTwo ? "Strike them both" : "Strike"}</span>
+                <span>
+                  {!ready
+                    ? `Choose ${needTwo ? 2 - picks.length : 1} more`
+                    : needTwo
+                      ? "Lock in both names"
+                      : `Lock in ${room.players.find((p) => p.playerId === picks[0])?.name ?? "this name"}`}
+                </span>
                 <Flame size={16} />
               </button>
-              {needTwo && (
-                <p className="vd-voice" style={{ marginTop: 11 }}>
-                  Both right and it is yours. Either wrong and the realm holds.
-                </p>
-              )}
+              <p className="vd-hint">
+                {needTwo
+                  ? "Get both right and evil wins. Get either one wrong and good wins."
+                  : "Get it right and evil wins the game. Get it wrong and good wins."}
+              </p>
             </div>
           </div>
         )}

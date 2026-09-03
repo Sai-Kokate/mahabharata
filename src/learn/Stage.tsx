@@ -15,6 +15,7 @@ import gsap from "gsap";
 import { Check, Pause, Play, RotateCcw, X } from "lucide-react";
 import { CouncilSeal, type Seat } from "../CouncilSeal";
 import { CAST, type Beat, type Scenario } from "./scenarios";
+import { prefersReducedMotion, settleWhenUnwatched } from "../motion";
 import emblemSrc from "../assets/mark.svg";
 
 /** How long a beat holds before the next one, when playing. */
@@ -88,10 +89,14 @@ export function Stage({ scenario }: { scenario: Scenario }) {
 function Caption({ beat }: { beat: Beat }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) return;
     const ctx = gsap.context(() => {
-      gsap.from(".lx-say", { y: 10, opacity: 0, duration: 0.4, ease: "power3.out" });
-      gsap.from(".lx-note", { opacity: 0, duration: 0.4, delay: 0.15 });
+      /* The caption is the whole lesson — the one sentence a beat exists to
+         say. It must never be left invisible because the tab was hidden. */
+      const tl = gsap.timeline();
+      tl.from(".lx-say", { y: 10, opacity: 0, duration: 0.4, ease: "power3.out" })
+        .from(".lx-note", { opacity: 0, duration: 0.4 }, 0.15);
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, []);
@@ -108,7 +113,7 @@ function Cards({ cards }: { cards: Array<"back" | "success" | "fail"> }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const faces = gsap.utils.toArray<HTMLElement>(".lx-card.is-up .lx-card__in");
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       // Skip the animated entrance/flip, but an "is-up" card's rotateY is set
       // entirely by this call (learn.css's own rotateY(180deg) is on the
       // FRONT FACE, not this wrapper) — so it still needs setting, instantly,
@@ -117,14 +122,17 @@ function Cards({ cards }: { cards: Array<"back" | "success" | "fail"> }) {
       return;
     }
     const ctx = gsap.context(() => {
-      gsap.from(".lx-card", { y: 18, opacity: 0, stagger: 0.07, duration: 0.35 });
+      const tl = gsap.timeline();
+      tl.from(".lx-card", { y: 18, opacity: 0, stagger: 0.07, duration: 0.35 }, 0);
       if (faces.length) {
-        gsap.fromTo(
+        tl.fromTo(
           faces,
           { rotateY: 0 },
-          { rotateY: 180, stagger: 0.22, duration: 0.5, delay: 0.35, ease: "power2.inOut" },
+          { rotateY: 180, stagger: 0.22, duration: 0.5, ease: "power2.inOut" },
+          0.35,
         );
       }
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, []);
@@ -149,11 +157,11 @@ function Tally({ yes, no }: { yes: number; no: number }) {
   return (
     <div className="lx-tally">
       <div className="lx-tally__side">
-        <span className="vd-label"><Check size={11} strokeWidth={2.5} /> Approve</span>
+        <span className="vd-label"><Check size={13} strokeWidth={2.5} /> Voted yes</span>
         <strong>{yes}</strong>
       </div>
       <div className="lx-tally__side lx-tally__side--no">
-        <span className="vd-label"><X size={11} strokeWidth={2.5} /> Reject</span>
+        <span className="vd-label"><X size={13} strokeWidth={2.5} /> Voted no</span>
         <strong>{no}</strong>
       </div>
     </div>
@@ -162,10 +170,10 @@ function Tally({ yes, no }: { yes: number; no: number }) {
 
 function Track({ track }: { track: Array<"success" | "fail" | null> }) {
   return (
-    <div className="lx-track" aria-label="Quests">
+    <div className="lx-track" aria-label="The five missions">
       {track.map((r, n) => (
         <span key={n} className={`lx-track__q ${r ? `is-${r}` : ""}`}>
-          {["I", "II", "III", "IV", "V"][n]}
+          {n + 1}
         </span>
       ))}
     </div>
@@ -175,7 +183,7 @@ function Track({ track }: { track: Array<"success" | "fail" | null> }) {
 function Rejects({ used }: { used: number }) {
   return (
     <div className="lx-rejects">
-      <span className="vd-label">Parties turned away</span>
+      <span className="vd-label">Teams voted down</span>
       <span className="lx-rejects__pips" aria-label={`${used} of 5`}>
         {Array.from({ length: 5 }, (_, n) => (
           <i key={n} className={n < used ? "is-on" : undefined} />
@@ -218,7 +226,7 @@ function Transport({
         ))}
       </div>
 
-      <span className="vd-label vd-label--dim">{i + 1} / {total}</span>
+      <span className="vd-label">Step {i + 1} of {total}</span>
     </div>
   );
 }

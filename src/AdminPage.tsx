@@ -47,7 +47,10 @@ export default function AdminPage() {
     return (
       <div className="vd-board">
         <div className="vd-content vd-center">
-          <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+          <p className="vd-loading" role="status">
+            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+            <span>Loading the admin console…</span>
+          </p>
         </div>
       </div>
     );
@@ -58,12 +61,14 @@ export default function AdminPage() {
       <div className="vd-board">
         <div className="vd-content vd-page">
           <div className="vd-page__back">
-            <a className="vd-pill" href="/play"><ArrowLeft size={11} /> Back to council</a>
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
           </div>
           <header className="vd-page__head">
-            <span className="vd-label vd-label--brass"><Shield size={11} /> Admin</span>
-            <h1 className="vd-h1">Admin console</h1>
-            <p className="vd-voice">Sign in to continue.</p>
+            <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+            <h1 className="vd-hero">Admin console</h1>
+            <p className="vd-voice">
+              Sign in with an admin account to manage plans and payments.
+            </p>
           </header>
           <SignInCard />
         </div>
@@ -77,19 +82,20 @@ export default function AdminPage() {
       <div className="vd-board">
         <div className="vd-content vd-page">
           <div className="vd-page__back">
-            <a className="vd-pill" href="/play"><ArrowLeft size={11} /> Back to council</a>
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
           </div>
           <header className="vd-page__head">
-            <span className="vd-label vd-label--brass"><Shield size={11} /> Admin</span>
-            <h1 className="vd-h1">Not your console</h1>
+            <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+            <h1 className="vd-hero">You don't have access to this</h1>
             <p className="vd-voice">
-              <strong>{viewer.email}</strong> is not an admin on this deployment.
-              Admin emails come from the <code>ADMIN_EMAILS</code> Convex
-              environment variable.
+              <strong>{viewer.email}</strong> isn't an admin account, so there's
+              nothing for you here. If you were expecting access, whoever runs
+              this deployment can add your email to the{" "}
+              <code>ADMIN_EMAILS</code> setting.
             </p>
           </header>
           <button className="vd-pill vd-pill--action" onClick={() => void signOut()}>
-            <LogOut size={11} /> Sign out
+            <LogOut size={13} /> Sign out
           </button>
         </div>
       </div>
@@ -100,16 +106,17 @@ export default function AdminPage() {
     <div className="vd-board">
       <div className="vd-content vd-page">
         <div className="vd-page__back">
-          <a className="vd-pill" href="/play"><ArrowLeft size={11} /> Back to council</a>
+          <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
         </div>
         <header className="vd-page__head">
-          <span className="vd-label vd-label--brass"><Shield size={11} /> Admin</span>
-          <h1 className="vd-h1">Admin console</h1>
+          <span className="vd-label vd-label--brass"><Shield size={13} /> Admin</span>
+          <h1 className="vd-hero">Admin console</h1>
           <p className="vd-voice">
-            Signed in as <strong>{viewer.email}</strong>
+            Signed in as <strong>{viewer.email}</strong>. Approve payments, edit
+            plans, and see who is covered.
           </p>
           <button className="vd-textbtn" onClick={() => void signOut()}>
-            <LogOut size={11} /> Sign out
+            <LogOut size={13} /> Sign out
           </button>
         </header>
 
@@ -122,10 +129,10 @@ export default function AdminPage() {
           style={{ margin: "24px 0" }}
         >
           {([
-            ["orders", "Payment requests", Clock],
-            ["subs", "Subscriptions", Crown],
-            ["users", "Users", Users],
-            ["grant", "Grant a plan", Gift],
+            ["orders", "Payments to check", Clock],
+            ["subs", "Active plans", Crown],
+            ["users", "Accounts", Users],
+            ["grant", "Give a plan", Gift],
           ] as const).map(([id, label, Icon]) => (
             <button
               key={id}
@@ -135,8 +142,8 @@ export default function AdminPage() {
               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
               onClick={() => setTab(id)}
             >
-              <Icon size={13} />
-              <span className="vd-label" style={{ color: "inherit" }}>{label}</span>
+              <Icon size={14} />
+              <span className="vd-seg__label">{label}</span>
             </button>
           ))}
         </div>
@@ -165,13 +172,13 @@ function Overview() {
   const o = useQuery(api.billing.adminOverview, {});
   if (!o) return null;
   const tiles: Array<[string, string]> = [
-    ["Pending", String(o.pendingOrders)],
-    ["Live plans", String(o.liveSubscriptions)],
-    ["Seats covered", String(o.seatsCovered)],
+    ["To check", String(o.pendingOrders)],
+    ["Active plans", String(o.liveSubscriptions)],
+    ["People covered", String(o.seatsCovered)],
     ["Approved", String(o.approvedOrders)],
-    ["Collected", INR(o.revenueInr)],
-    ["Users", String(o.users)],
-    ["Open rooms", String(o.openRooms)],
+    ["Money in", INR(o.revenueInr)],
+    ["Accounts", String(o.users)],
+    ["Games open now", String(o.openRooms)],
   ];
   return (
     <div className="vd-stats">
@@ -179,7 +186,7 @@ function Overview() {
         <div key={label} className="vd-studded vd-panel vd-panel--strong">
           <span className="vd-stud-b" aria-hidden />
           <div className="vd-numeral" style={{ fontSize: 28 }}>{value}</div>
-          <div className="vd-label vd-label--dim" style={{ marginTop: 6 }}>{label}</div>
+          <div className="vd-label" style={{ marginTop: 6 }}>{label}</div>
         </div>
       ))}
     </div>
@@ -207,25 +214,29 @@ function Orders({
   return (
     <>
       <section className="vd-page__section">
-        <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-          <Clock size={16} /> Awaiting approval ({pending.length})
+        <h2 className="vd-h2 vd-h2--icon">
+          <Clock size={18} /> Payments to check ({pending.length})
         </h2>
         {pending.length === 0 && (
-          <p className="vd-voice" style={{ marginTop: 12 }}>Nothing to review right now.</p>
+          <p className="vd-voice" style={{ marginTop: 12 }}>
+            Nothing waiting. New payment requests will appear here.
+          </p>
         )}
         <div className="vd-stack" style={{ marginTop: 16 }}>
           {pending.map((o) => (
             <div key={o._id} className="vd-studded vd-panel vd-panel--strong vd-stack">
               <span className="vd-stud-b" aria-hidden />
               <div className="vd-row" style={{ justifyContent: "space-between" }}>
-                <strong style={{ font: "500 16px/1.2 var(--vd-display)" }}>{o.name}</strong>
-                <span className="vd-pill vd-pill--brass">{o.plan} · {INR(o.amountInr)}</span>
+                <strong className="vd-h3">{o.name}</strong>
+                <span className="vd-pill vd-pill--brass">
+                  {o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}
+                </span>
               </div>
               <span className="vd-label vd-label--dim">{o.email}</span>
 
               <div className="vd-row" style={{ gap: 20, marginTop: 4 }}>
                 <div>
-                  <div className="vd-label">Reference</div>
+                  <div className="vd-label">Payment reference</div>
                   <code style={{ fontSize: 13 }}>{o.paymentRef}</code>
                 </div>
                 <div>
@@ -233,20 +244,20 @@ function Orders({
                   <span style={{ fontSize: 13 }}>{fmtWhen(o.createdAt)}</span>
                 </div>
                 <div>
-                  <div className="vd-label">Seats</div>
+                  <div className="vd-label">People covered</div>
                   <span style={{ fontSize: 13 }}>{o.seats}</span>
                 </div>
               </div>
 
               <div className="vd-row" style={{ marginTop: 4 }}>
-                <span className="vd-label vd-label--dim">Covers:</span>
+                <span className="vd-label">Covers these emails</span>
                 {o.memberEmails.map((e: string) => (
                   <span key={e} className="vd-pill">{e}</span>
                 ))}
               </div>
 
               {o.note && (
-                <p className="vd-voice" style={{ margin: 0 }}>Buyer says: &ldquo;{o.note}&rdquo;</p>
+                <p className="vd-voice" style={{ margin: 0 }}>They added: &ldquo;{o.note}&rdquo;</p>
               )}
 
               <div className="vd-row" style={{ marginTop: 8 }}>
@@ -254,14 +265,14 @@ function Orders({
                   className="vd-field"
                   style={{ maxWidth: 200, marginBottom: 0 }}
                   inputMode="numeric"
-                  placeholder="days (blank = plan length)"
+                  placeholder="Days (leave blank for the full plan)"
                   value={days[o._id] ?? ""}
                   onChange={(e) => setDays({ ...days, [o._id]: e.target.value })}
                 />
                 <input
                   className="vd-field"
                   style={{ maxWidth: 220, marginBottom: 0 }}
-                  placeholder="note (optional)"
+                  placeholder="Note for them (optional)"
                   value={notes[o._id] ?? ""}
                   onChange={(e) => setNotes({ ...notes, [o._id]: e.target.value })}
                 />
@@ -276,16 +287,16 @@ function Orders({
                         days: Number.isFinite(d) && d > 0 ? d : undefined,
                         adminNote: notes[o._id]?.trim() || undefined,
                       });
-                    }, `Activated ${o.seats} seats for ${o.email}.`)
+                    }, `Done — ${o.seats} people on ${o.email}'s plan now have the paid features.`)
                   }
                 >
-                  <Check size={12} /> Approve
+                  <Check size={14} /> Approve and switch it on
                 </button>
                 <Confirm
                   className="vd-pill vd-pill--danger vd-pill--action"
-                  icon={<X size={12} />}
+                  icon={<X size={14} />}
                   label="Reject"
-                  ask={`Reject ${o.email}'s request?`}
+                  ask={`Reject ${o.email}'s payment request? They'll be able to submit a new one.`}
                   disabled={busy}
                   danger
                   onConfirm={() =>
@@ -295,7 +306,7 @@ function Orders({
                           orderId: o._id,
                           adminNote: notes[o._id]?.trim() || undefined,
                         }),
-                      `Rejected ${o.email}'s request.`,
+                      `Rejected. ${o.email} can submit a new request.`,
                     )
                   }
                 />
@@ -307,8 +318,8 @@ function Orders({
 
       {done.length > 0 && (
         <section className="vd-page__section">
-          <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-            <ScrollText size={16} /> History
+          <h2 className="vd-h2 vd-h2--icon">
+            <ScrollText size={18} /> Already dealt with
           </h2>
           <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
             <div className="vd-rowlist__head">
@@ -317,11 +328,11 @@ function Orders({
             {done.map((o) => (
               <div key={o._id} className="vd-rowlist__row">
                 <span>{fmtDate(o.createdAt)}</span>
-                <span>{o.email} · {o.plan} · {INR(o.amountInr)}</span>
+                <span>{o.email} · {o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}</span>
                 <span
                   className={`vd-pill ${o.status === "approved" ? "vd-pill--parchment" : "vd-pill--danger"}`}
                 >
-                  {o.status}
+                  {o.status === "approved" ? "Approved" : "Rejected"}
                 </span>
               </div>
             ))}
@@ -350,15 +361,18 @@ function Subscriptions({
   if (subs.length === 0) {
     return (
       <section className="vd-page__section">
-        <p className="vd-voice">No subscriptions yet.</p>
+        <p className="vd-voice">
+          No plans yet. Once you approve a payment, or give someone a plan, it
+          will show up here.
+        </p>
       </section>
     );
   }
 
   return (
     <section className="vd-page__section">
-      <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-        <Crown size={16} /> Subscriptions ({subs.length})
+      <h2 className="vd-h2 vd-h2--icon">
+        <Crown size={18} /> Active plans ({subs.length})
       </h2>
       <div className="vd-stack" style={{ marginTop: 16 }}>
         {subs.map((s) => {
@@ -367,29 +381,34 @@ function Subscriptions({
             <div key={s._id} className="vd-studded vd-panel vd-panel--strong vd-stack">
               <span className="vd-stud-b" aria-hidden />
               <div className="vd-row" style={{ justifyContent: "space-between" }}>
-                <strong style={{ font: "500 16px/1.2 var(--vd-display)" }}>{s.ownerEmail}</strong>
+                <strong className="vd-h3">{s.ownerEmail}</strong>
                 <span className={`vd-pill ${s.live ? "vd-pill--parchment" : "vd-pill--danger"}`}>
-                  {s.live ? "live" : s.status}
+                  {s.live ? "Active" : s.status === "revoked" ? "Revoked" : "Expired"}
                 </span>
               </div>
-              <span className="vd-label vd-label--dim">
-                {s.plan} · {s.seats} seats · expires {fmtDate(s.expiresAt)}
+              <span className="vd-label">
+                {s.plan === "yearly" ? "Yearly" : "Monthly"} · covers {s.seats} people ·
+                runs out {fmtDate(s.expiresAt)}
               </span>
               {s.adminNote && (
-                <p className="vd-voice" style={{ margin: 0 }}>Note: &ldquo;{s.adminNote}&rdquo;</p>
+                <p className="vd-voice" style={{ margin: 0 }}>Your note: &ldquo;{s.adminNote}&rdquo;</p>
               )}
               <div className="vd-row">
-                <span className="vd-label vd-label--dim">{s.members.length}/{s.seats} seats used</span>
+                <span className="vd-label">{s.members.length} of {s.seats} places used</span>
                 {s.members.map((e: string) => (
                   <span key={e} className="vd-pill">{e}</span>
                 ))}
               </div>
-              <label className="vd-field__label">Covered emails (comma separated)</label>
+              <label className="vd-field__label">Who this plan covers</label>
               <input
                 className="vd-field"
                 value={draft}
+                aria-describedby={`members-help-${s._id}`}
                 onChange={(e) => setDrafts({ ...drafts, [s._id]: e.target.value })}
               />
+              <span className="vd-hint" id={`members-help-${s._id}`}>
+                Email addresses, separated by commas.
+              </span>
               <div className="vd-row">
                 <button
                   className="vd-pill vd-pill--action"
@@ -401,11 +420,11 @@ function Subscriptions({
                           subscriptionId: s._id,
                           emails: draft.split(",").map((e) => e.trim()).filter(Boolean),
                         }),
-                      "Seats updated.",
+                      "Saved.",
                     )
                   }
                 >
-                  <Check size={12} /> Save seats
+                  <Check size={14} /> Save this list
                 </button>
                 <button
                   className="vd-pill vd-pill--action"
@@ -418,24 +437,24 @@ function Subscriptions({
                           status: "active",
                           expiresAt: Math.max(Date.now(), s.expiresAt) + 30 * 86400_000,
                         }),
-                      "Extended by 30 days.",
+                      "Added 30 days to this plan.",
                     )
                   }
                 >
-                  <RefreshCw size={12} /> +30 days
+                  <RefreshCw size={14} /> Add 30 days
                 </button>
                 {s.status === "active" ? (
                   <Confirm
                     className="vd-pill vd-pill--danger vd-pill--action"
-                    icon={<Ban size={12} />}
-                    label="Revoke"
-                    ask={`Revoke ${s.ownerEmail}'s plan?`}
+                    icon={<Ban size={14} />}
+                    label="Turn off"
+                    ask={`Turn off ${s.ownerEmail}'s plan now? Everyone on it loses the paid features immediately. You can switch it back on afterwards.`}
                     disabled={busy}
                     danger
                     onConfirm={() =>
                       run(
                         () => setStatus({ subscriptionId: s._id, status: "revoked" }),
-                        "Revoked.",
+                        "Turned off. You can switch it back on from this page.",
                       )
                     }
                   />
@@ -446,22 +465,22 @@ function Subscriptions({
                     onClick={() =>
                       void run(
                         () => setStatus({ subscriptionId: s._id, status: "active" }),
-                        "Reactivated.",
+                        "Turned back on.",
                       )
                     }
                   >
-                    <BadgeCheck size={12} /> Reactivate
+                    <BadgeCheck size={14} /> Turn back on
                   </button>
                 )}
                 <Confirm
                   className="vd-pill vd-pill--danger vd-pill--action"
-                  icon={<Trash2 size={12} />}
-                  label="Delete"
-                  ask={`Permanently delete ${s.ownerEmail}'s plan and all its seats?`}
+                  icon={<Trash2 size={14} />}
+                  label="Delete for good"
+                  ask={`Permanently delete ${s.ownerEmail}'s plan and everyone on it? This cannot be undone — use "Turn off" if you might want it back.`}
                   disabled={busy}
                   danger
                   onConfirm={() =>
-                    run(() => del({ subscriptionId: s._id }), "Subscription deleted.")
+                    run(() => del({ subscriptionId: s._id }), "Deleted.")
                   }
                 />
               </div>
@@ -480,12 +499,12 @@ function UsersList() {
   if (!users) return <Loading />;
   return (
     <section className="vd-page__section">
-      <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-        <Users size={16} /> Users ({users.length})
+      <h2 className="vd-h2 vd-h2--icon">
+        <Users size={18} /> Accounts ({users.length})
       </h2>
       <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
         <div className="vd-rowlist__head">
-          <span>Joined</span><span>Account</span><span>Tier</span>
+          <span>Signed up</span><span>Account</span><span>Plan</span>
         </div>
         {users.map((u) => (
           <div key={u._id} className="vd-rowlist__row">
@@ -495,7 +514,7 @@ function UsersList() {
               {u.isAdmin && " · admin"}
             </span>
             <span className={`vd-pill ${u.premium ? "vd-pill--parchment" : ""}`}>
-              {u.premium ? "premium" : "free"}
+              {u.premium ? "Paid" : "Free"}
             </span>
           </div>
         ))}
@@ -522,28 +541,39 @@ function Grant({
 
   return (
     <section className="vd-page__section">
-      <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-        <Gift size={16} /> Grant a plan directly
+      <h2 className="vd-h2 vd-h2--icon">
+        <Gift size={18} /> Give someone a plan
       </h2>
       <p className="vd-voice" style={{ marginTop: 8 }}>
-        For comps, testing, or a payment you took outside the app. The person
-        must have created an account at least once, so the account exists.
+        Use this for free plans, testing, or a payment you took some other way.
+        The person needs to have signed up at least once, so their account
+        already exists.
       </p>
 
-      <label className="vd-field__label" style={{ marginTop: 20, display: "block" }}>Owner email</label>
+      <label className="vd-field__label" style={{ marginTop: 20, display: "block" }} htmlFor="grant-owner">
+        Whose plan is it?
+      </label>
       <input
+        id="grant-owner"
         className="vd-field"
         placeholder="someone@example.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <label className="vd-field__label" style={{ display: "block" }}>Also cover (comma separated, optional)</label>
+      <label className="vd-field__label" style={{ display: "block" }} htmlFor="grant-others">
+        Anyone else it should cover (optional)
+      </label>
       <input
+        id="grant-others"
         className="vd-field"
-        placeholder="a@x.com, b@y.com"
+        placeholder="a@example.com, b@example.com"
         value={emails}
         onChange={(e) => setEmails(e.target.value)}
+        aria-describedby="grant-others-help"
       />
+      <span className="vd-hint" id="grant-others-help">
+        Email addresses, separated by commas.
+      </span>
 
       <div className="vd-row">
         <select
@@ -552,14 +582,14 @@ function Grant({
           value={plan}
           onChange={(e) => setPlan(e.target.value as "monthly" | "yearly")}
         >
-          <option value="monthly">monthly</option>
-          <option value="yearly">yearly</option>
+          <option value="monthly">Monthly plan</option>
+          <option value="yearly">Yearly plan</option>
         </select>
         <input
           className="vd-field"
           style={{ maxWidth: 160 }}
           inputMode="numeric"
-          placeholder="days (optional)"
+          placeholder="Days (optional)"
           value={days}
           onChange={(e) => setDays(e.target.value)}
         />
@@ -567,16 +597,19 @@ function Grant({
           className="vd-field"
           style={{ maxWidth: 160 }}
           inputMode="numeric"
-          placeholder="seats (optional)"
+          placeholder="People (optional)"
           value={seats}
           onChange={(e) => setSeats(e.target.value)}
         />
       </div>
 
-      <label className="vd-field__label" style={{ display: "block" }}>Note (optional)</label>
+      <label className="vd-field__label" style={{ display: "block" }} htmlFor="grant-note">
+        Note to yourself (optional)
+      </label>
       <input
+        id="grant-note"
         className="vd-field"
-        placeholder="why this was granted"
+        placeholder="e.g. competition winner"
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
@@ -596,20 +629,25 @@ function Grant({
               memberEmails: emails.split(",").map((e) => e.trim()).filter(Boolean),
               adminNote: note.trim() || undefined,
             });
-          }, `Granted a ${plan} plan to ${email.trim()}.`)
+          }, `Done — ${email.trim()} now has a ${plan} plan.`)
         }
       >
-        <span>Grant plan</span>
-        <Gift size={15} />
+        <span>
+          {email.trim().length < 5 ? "Enter an email address first" : "Give them the plan"}
+        </span>
+        <Gift size={16} />
       </button>
     </section>
   );
 }
 
-function Loading() {
+function Loading({ what = "Loading\u2026" }: { what?: string }) {
   return (
     <div className="vd-center" style={{ minHeight: 200 }}>
-      <Loader2 size={22} className="vd-spin" color="var(--vd-brass)" />
+      <p className="vd-loading" role="status">
+        <Loader2 size={22} className="vd-spin" color="var(--vd-brass)" />
+        <span>{what}</span>
+      </p>
     </div>
   );
 }

@@ -84,7 +84,10 @@ export default function UpgradePage() {
     return (
       <div className="vd-board">
         <div className="vd-content vd-center">
-          <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+          <p className="vd-loading" role="status">
+            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+            <span>Loading your plan…</span>
+          </p>
         </div>
       </div>
     );
@@ -96,14 +99,15 @@ export default function UpgradePage() {
       <div className="vd-board">
         <div className="vd-content vd-page">
           <div className="vd-page__back">
-            <a className="vd-pill" href="/play"><ArrowLeft size={11} /> Back to council</a>
+            <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
           </div>
           <header className="vd-page__head">
-            <span className="vd-label vd-label--brass"><Crown size={11} /> Premium</span>
-            <h1 className="vd-h1">Unlock the full war</h1>
+            <span className="vd-label vd-label--brass"><Crown size={13} /> Paid plan</span>
+            <h1 className="vd-hero">Get the extra roles and settings</h1>
             <p className="vd-voice">
-              One plan covers <strong>{seats} people</strong>. Sign in to buy one, or
-              to claim a seat someone bought for you.
+              One plan covers <strong>{seats} people</strong>, and the game is
+              free to play without it. Sign in below to buy a plan, or to use a
+              place on one somebody has already bought for you.
             </p>
           </header>
           <SignInCard />
@@ -118,11 +122,11 @@ export default function UpgradePage() {
     <div className="vd-board">
       <div className="vd-content vd-page">
         <div className="vd-page__back">
-          <a className="vd-pill" href="/play"><ArrowLeft size={11} /> Back to council</a>
+          <a className="vd-pill" href="/play"><ArrowLeft size={13} /> Back to the game</a>
         </div>
         <header className="vd-page__head">
-          <span className="vd-label vd-label--brass"><Crown size={11} /> Premium</span>
-          <h1 className="vd-h1">{viewer.premium ? "Your plan" : "Unlock the full war"}</h1>
+          <span className="vd-label vd-label--brass"><Crown size={13} /> Paid plan</span>
+          <h1 className="vd-hero">{viewer.premium ? "Your plan" : "Get the extra roles and settings"}</h1>
           <p className="vd-voice">
             Signed in as <strong>{viewer.email}</strong>
             {viewer.isAdmin && (
@@ -133,7 +137,7 @@ export default function UpgradePage() {
             )}
           </p>
           <button className="vd-textbtn" onClick={() => void signOut()}>
-            <LogOut size={11} /> Sign out
+            <LogOut size={13} /> Sign out
           </button>
         </header>
 
@@ -143,23 +147,24 @@ export default function UpgradePage() {
             <span className="vd-stud-b" aria-hidden />
             {viewer.premium ? <BadgeCheck size={22} color="var(--vd-brass)" /> : <ScrollText size={22} />}
             <div>
-              <strong style={{ font: "500 16px/1.2 var(--vd-display)", display: "block", marginBottom: 4 }}>
-                {viewer.premium ? "Premium active" : "Free tier"}
+              <strong className="vd-h3" style={{ display: "block", marginBottom: 6 }}>
+                {viewer.premium ? "Your paid plan is active" : "You're on the free plan"}
               </strong>
               <p className="vd-voice" style={{ margin: 0 }}>
                 {viewer.premium ? (
                   <>
-                    Every character and expansion is unlocked
+                    Every role, add-on and setting is unlocked
                     {viewer.expiresAt ? <> until {fmtDate(viewer.expiresAt)}</> : null}.
                     {!viewer.iOwnPlan && viewer.ownerEmail && (
-                      <> You hold a seat on <strong>{viewer.ownerEmail}</strong>'s plan.</>
+                      <> You have a place on <strong>{viewer.ownerEmail}</strong>'s plan.</>
                     )}
                   </>
                 ) : (
                   <>
-                    You can play full games of base Avalon. Mordred, Oberon,
-                    Guinevere, the lovers, the Lancelots, all three expansions and
-                    the themed worlds need a plan.
+                    You can play full games with no time limit and up to 18
+                    people. A paid plan adds the extra roles (Mordred, Oberon,
+                    Guinevere, the lovers, the Lancelots), all three add-ons,
+                    and the four other settings.
                   </>
                 )}
               </p>
@@ -170,20 +175,20 @@ export default function UpgradePage() {
         {/* --------------------------- seat editor -------------------------- */}
         {sub && sub.iAmOwner && (
           <section className="vd-page__section">
-            <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-              <Users size={16} /> Who your plan covers
+            <h2 className="vd-h2 vd-h2--icon">
+              <Users size={18} /> Who your plan covers
             </h2>
             <p className="vd-voice" style={{ margin: "8px 0 16px" }}>
-              Your own seat ({sub.ownerEmail}) is permanent. Add up to{" "}
-              {sub.seats - 1} more — they get premium in any room they host or join
-              once they sign in with that email address.
+              Your own place ({sub.ownerEmail}) is always included. You can add
+              up to {sub.seats - 1} more people by email. Once they sign in with
+              that address, any game they host or join gets the paid features.
             </p>
             <div className="vd-grid2">
               {Array.from({ length: sub.seats - 1 }).map((_, i) => (
                 <input
                   key={i}
                   className="vd-field"
-                  placeholder={`teammate ${i + 1} — email`}
+                  placeholder={`Person ${i + 1} — their email`}
                   value={memberDraft[i] ?? ""}
                   onChange={(e) => {
                     const next = [...memberDraft];
@@ -199,12 +204,12 @@ export default function UpgradePage() {
               onClick={() =>
                 void run(
                   () => mMembers({ emails: memberDraft.map((e) => e.trim()).filter(Boolean) }),
-                  "Seats updated.",
+                  "Saved. Everyone listed now has the paid features.",
                 )
               }
             >
-              <span>Save seats</span>
-              <Check size={15} />
+              <span>Save who's covered</span>
+              <Check size={16} />
             </button>
           </section>
         )}
@@ -212,8 +217,8 @@ export default function UpgradePage() {
         {/* ---------------------------- buy flow --------------------------- */}
         {pendingOrder ? (
           <section className="vd-page__section">
-            <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-              <Clock size={16} /> Awaiting approval
+            <h2 className="vd-h2 vd-h2--icon">
+              <Clock size={18} /> Waiting for us to check your payment
             </h2>
             <div
               className="vd-studded vd-panel vd-panel--strong vd-row"
@@ -222,14 +227,16 @@ export default function UpgradePage() {
               <span className="vd-stud-b" aria-hidden />
               <Clock size={22} color="var(--vd-brass)" />
               <div>
-                <strong style={{ font: "500 16px/1.2 var(--vd-display)", display: "block", marginBottom: 4 }}>
+                <strong className="vd-h3" style={{ display: "block", marginBottom: 6 }}>
                   {pendingOrder.plan === "yearly" ? "Yearly" : "Monthly"} plan ·{" "}
                   {INR(pendingOrder.amountInr)}
                 </strong>
                 <p className="vd-voice" style={{ margin: 0 }}>
-                  Submitted {fmtDate(pendingOrder.createdAt)} with reference{" "}
-                  <code>{pendingOrder.paymentRef}</code>. An admin will verify the
-                  payment and activate your {pendingOrder.seats} seats.
+                  You sent this on {fmtDate(pendingOrder.createdAt)} with the
+                  reference <code>{pendingOrder.paymentRef}</code>. Someone will
+                  check the payment and switch on the paid features for all{" "}
+                  {pendingOrder.seats} people. Nothing else for you to do — you
+                  can close this page.
                 </p>
               </div>
             </div>
@@ -238,17 +245,17 @@ export default function UpgradePage() {
               style={{ marginTop: 12 }}
               disabled={busy}
               onClick={() =>
-                void run(() => mCancel({ orderId: pendingOrder._id }), "Request withdrawn.")
+                void run(() => mCancel({ orderId: pendingOrder._id }), "Request cancelled. You can submit a new one whenever you like.")
               }
             >
-              <X size={12} /> Withdraw request
+              <X size={14} /> Cancel this request
             </button>
           </section>
         ) : (
           <>
             <section className="vd-page__section">
-              <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-                <Crown size={16} /> Choose a plan
+              <h2 className="vd-h2 vd-h2--icon">
+                <Crown size={18} /> 1. Choose a plan
               </h2>
               <div className="vd-grid2" style={{ marginTop: 16 }}>
                 {(["monthly", "yearly"] as const).map((k) => {
@@ -265,15 +272,16 @@ export default function UpgradePage() {
                         <span className="vd-opt__name" style={{ textTransform: "uppercase" }}>
                           {k === "yearly" ? "Yearly" : "Monthly"}
                         </span>
-                        {on && <Check size={14} color="var(--vd-brass)" />}
+                        {on && <span className="vd-opt__lock"><Check size={14} /> Chosen</span>}
                       </span>
                       <span className="vd-numeral" style={{ fontSize: 22, color: "var(--vd-brass)" }}>
                         {INR(price)}
                       </span>
                       <span className="vd-opt__desc">
-                        {seats} seats · {k === "yearly" ? "365" : "30"} days
+                        Covers {seats} people for{" "}
+                        {k === "yearly" ? "a year" : "30 days"}
                         {k === "yearly" && (
-                          <> · saves {INR(Math.max(0, config.monthlyInr * 12 - config.yearlyInr))}</>
+                          <>. Saves {INR(Math.max(0, config.monthlyInr * 12 - config.yearlyInr))} versus paying monthly</>
                         )}
                       </span>
                     </button>
@@ -283,15 +291,18 @@ export default function UpgradePage() {
             </section>
 
             <section className="vd-page__section">
-              <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-                <QrCode size={16} /> Pay {INR(amount)}
+              <h2 className="vd-h2 vd-h2--icon">
+                <QrCode size={18} /> 2. Pay {INR(amount)}
               </h2>
               {config.qrImageUrl ? (
                 <div className="vd-stack" style={{ alignItems: "center", textAlign: "center", marginTop: 16 }}>
                   <span className="vd-qr-frame">
                     <img src={config.qrImageUrl} alt="Payment QR code" style={{ display: "block", width: 220 }} />
                   </span>
-                  <p className="vd-voice">Scan with any UPI app, then paste the reference below.</p>
+                  <p className="vd-voice">
+                    Scan this with any UPI app to pay <strong>{INR(amount)}</strong>,
+                    then copy the transaction reference into the form below.
+                  </p>
                 </div>
               ) : qr ? (
                 <div className="vd-stack" style={{ alignItems: "center", textAlign: "center", marginTop: 16 }}>
@@ -299,44 +310,45 @@ export default function UpgradePage() {
                     <QRCodeSVG value={qr} size={188} level="M" includeMargin />
                   </span>
                   <p className="vd-voice">
-                    Scan with any UPI app to pay <strong>{INR(amount)}</strong> to{" "}
-                    <strong>{config.upiVpa}</strong>, then paste the transaction
-                    reference below.
+                    Scan this with any UPI app to pay <strong>{INR(amount)}</strong>{" "}
+                    to <strong>{config.upiVpa}</strong>, then copy the
+                    transaction reference into the form below.
                   </p>
-                  <a className="vd-textbtn" href={qr}>Open in a UPI app on this device</a>
+                  <a className="vd-textbtn" href={qr}>Or pay in an app on this phone</a>
                 </div>
               ) : (
                 <div className="vd-panel vd-panel--danger" style={{ marginTop: 16 }}>
                   <p className="vd-voice" style={{ margin: 0, color: "var(--vd-red-ink)" }}>
-                    Payment is not configured yet. The admin needs to set{" "}
-                    <code>UPI_VPA</code> (or <code>PAYMENT_QR_URL</code>) in the
-                    Convex environment.
+                    Payments aren't set up yet, so you can't buy a plan right
+                    now. (If you're the admin: set <code>UPI_VPA</code> or{" "}
+                    <code>PAYMENT_QR_URL</code> in the Convex environment.)
                   </p>
                 </div>
               )}
             </section>
 
             <section className="vd-page__section">
-              <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-                <Users size={16} /> Who should it cover?
+              <h2 className="vd-h2 vd-h2--icon">
+                <Users size={18} /> 3. Say who it covers, and send it
               </h2>
               <p className="vd-voice" style={{ margin: "8px 0 16px" }}>
-                Your seat is included automatically:
+                You're included automatically:
               </p>
               <div className="vd-tile vd-tile--parchment" style={{ marginBottom: 16 }}>
                 {viewer.email}
-                <span className="vd-tile__meta" style={{ color: "inherit" }}>your seat</span>
+                <span className="vd-tile__meta" style={{ color: "inherit" }}>You</span>
               </div>
               <p className="vd-voice" style={{ margin: "0 0 12px" }}>
-                List up to {seats - 1} teammates — they each need an account on
-                that same email address to use it. You can change these later.
+                Add up to {seats - 1} other people, or leave these blank and fill
+                them in later. Each person needs to sign in with the same email
+                address you type here.
               </p>
               <div className="vd-grid2">
                 {members.map((val, i) => (
                   <input
                     key={i}
                     className="vd-field"
-                    placeholder={`teammate ${i + 1} — email (optional)`}
+                    placeholder={`Person ${i + 1} — their email (optional)`}
                     value={val}
                     onChange={(e) => {
                       const next = [...members];
@@ -348,7 +360,7 @@ export default function UpgradePage() {
               </div>
 
               <label className="vd-field__label" htmlFor="payref">
-                UPI transaction reference / UTR
+                Payment reference (UTR)
               </label>
               <input
                 id="payref"
@@ -356,14 +368,19 @@ export default function UpgradePage() {
                 placeholder="e.g. 4179 1234 5678"
                 value={paymentRef}
                 onChange={(e) => setPaymentRef(e.target.value)}
+                aria-describedby="payref-help"
               />
+              <span className="vd-hint" id="payref-help">
+                Your UPI app shows this after the payment goes through. It's how
+                we match your payment to your account.
+              </span>
               <label className="vd-field__label" htmlFor="paynote">
-                Anything the admin should know (optional)
+                Anything else we should know? (optional)
               </label>
               <input
                 id="paynote"
                 className="vd-field"
-                placeholder="paid from a different number, etc."
+                placeholder="e.g. paid from a different number"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
@@ -380,13 +397,21 @@ export default function UpgradePage() {
                         paymentRef,
                         note: note.trim() || undefined,
                       }),
-                    "Request submitted — an admin will verify your payment.",
+                    "Sent. We'll check your payment and switch the features on — usually within a few hours.",
                   )
                 }
               >
-                <span>I have paid — submit for approval</span>
-                {busy ? <Loader2 size={15} className="vd-spin" /> : <Check size={15} />}
+                <span>
+                  {paymentRef.trim().length < 4
+                    ? "Add your payment reference to continue"
+                    : "I've paid — send this for checking"}
+                </span>
+                {busy ? <Loader2 size={16} className="vd-spin" /> : <Check size={16} />}
               </button>
+              <span className="vd-hint">
+                We check payments by hand, so this usually takes a few hours.
+                You'll see the status on this page.
+              </span>
             </section>
           </>
         )}
@@ -403,8 +428,8 @@ export default function UpgradePage() {
         {/* --------------------------- order history ------------------------ */}
         {(orders ?? []).length > 0 && (
           <section className="vd-page__section">
-            <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-              <ScrollText size={16} /> Your requests
+            <h2 className="vd-h2 vd-h2--icon">
+              <ScrollText size={18} /> Your past requests
             </h2>
             <div className="vd-rowlist vd-rowlist--3col" style={{ marginTop: 16 }}>
               <div className="vd-rowlist__head">
@@ -413,7 +438,7 @@ export default function UpgradePage() {
               {(orders ?? []).map((o) => (
                 <div key={o._id} className="vd-rowlist__row">
                   <span>{fmtDate(o.createdAt)}</span>
-                  <span>{o.plan} · {INR(o.amountInr)}</span>
+                  <span>{o.plan === "yearly" ? "Yearly" : "Monthly"} · {INR(o.amountInr)}</span>
                   <span>
                     <span
                       className={`vd-pill ${
@@ -422,7 +447,9 @@ export default function UpgradePage() {
                         : "vd-pill--danger"
                       }`}
                     >
-                      {o.status}
+                      {o.status === "approved" ? "Approved"
+                        : o.status === "pending" ? "Being checked"
+                        : "Not approved"}
                     </span>
                     {o.adminNote && (
                       <span className="vd-voice" style={{ display: "block", marginTop: 4, fontSize: 12 }}>
@@ -446,31 +473,32 @@ export default function UpgradePage() {
 function TierTable({ config }: { config: any }) {
   return (
     <section className="vd-page__section">
-      <h2 className="vd-h2" style={{ fontSize: 18, display: "flex", alignItems: "center", gap: 8 }}>
-        <Sparkles size={16} /> What each tier includes
+      <h2 className="vd-h2 vd-h2--icon">
+        <Sparkles size={18} /> What each plan includes
       </h2>
       <div className="vd-grid2" style={{ marginTop: 16 }}>
         <div className="vd-panel vd-panel--strong" style={{ padding: 18 }}>
           <ScrollText size={22} color="var(--vd-brass)" />
-          <h3 style={{ font: "500 16px/1.2 var(--vd-display)", margin: "10px 0" }}>Free</h3>
-          <ul style={{ margin: 0, paddingLeft: 18, color: "var(--vd-ink-soft)", lineHeight: 1.6 }}>
-            <li>Merlin &amp; the Assassin</li>
-            <li>Percival &amp; Morgana</li>
-            <li>Loyal servants &amp; minions</li>
-            <li>The Medieval board</li>
-            <li>Tables of 5 to 18 — the full house rules above ten</li>
+          <h3 className="vd-h3" style={{ margin: "10px 0" }}>Free — no account needed</h3>
+          <ul className="vd-list">
+            <li>Merlin and the Assassin</li>
+            <li>Percival and Morgana</li>
+            <li>Plain good and evil players</li>
+            <li>The Medieval Kingdom setting</li>
+            <li>Games of 5 to 18 people</li>
           </ul>
         </div>
         <div className="vd-panel vd-panel--strong" style={{ padding: 18, borderColor: "var(--vd-brass)" }}>
           <Crown size={22} color="var(--vd-brass)" />
-          <h3 style={{ font: "500 16px/1.2 var(--vd-display)", margin: "10px 0" }}>
-            Premium · covers {config?.seats ?? 7} people
+          <h3 className="vd-h3" style={{ margin: "10px 0" }}>
+            Paid · everything in Free, plus…
           </h3>
-          <ul style={{ margin: 0, paddingLeft: 18, color: "var(--vd-ink-soft)", lineHeight: 1.6 }}>
+          <ul className="vd-list">
             {Object.entries(config?.premiumOptLabels ?? {}).map(([k, label]) => (
               <li key={k}>{label as string}</li>
             ))}
-            <li>Every themed world (Mahabharata, Maratha, Greek, Egyptian)</li>
+            <li>The four other settings: Mahabharata, Maratha, Greek, Egyptian</li>
+            <li>Covers {config?.seats ?? 7} people, not just you</li>
           </ul>
         </div>
       </div>

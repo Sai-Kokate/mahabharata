@@ -19,6 +19,7 @@ import {
 import "./styles.css";
 // After styles.css so the Council Seal tokens win on gameplay screens.
 import "./seal.css";
+import { Loader2 } from "lucide-react";
 
 const url = import.meta.env.VITE_CONVEX_URL as string;
 if (!url) {
@@ -41,27 +42,27 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
   landing: {
     title: "Decevia — Social deduction for 5 to 18 players",
     description:
-      "Convene a council of 5 to 18. Some of you are sworn to the realm and some of you are lying about it. Free online social deduction across five worlds.",
+      "A free hidden-roles party game for 5 to 18 people in the same room, played on your phones. Most of you are good; a few are secretly not. Five settings to play it in.",
   },
   learn: {
     title: "How to play — Decevia",
     description:
-      "An animated walkthrough: a round from start to finish, every character, the three expansions and all nine plot cards.",
+      "A walkthrough you can step through: one round from start to finish, every role, the three add-ons and all nine plot cards.",
   },
   rules: {
     title: "The rules — Decevia",
     description:
-      "Team sizes, quest sizes, every role's night vision, the expansions, and the house rules for tables above ten.",
+      "Team sizes, who gets shown what, the three add-ons, and how games of more than ten people work.",
   },
   signin: {
     title: "Sign in — Decevia",
-    description: "Sign in or create an account to hold a seat on a plan.",
+    description: "Sign in or create an account. You don't need one to play.",
   },
   upgrade: {
     title: "Plans — Decevia",
-    description: "Unlock every role, all three expansions and all five worlds.",
+    description: "What a paid plan adds: the extra roles, all three add-ons and the four other settings.",
   },
-  game: { title: "The council — Decevia", description: "" },
+  game: { title: "Your game — Decevia", description: "" },
   admin: { title: "Admin — Decevia", description: "" },
 };
 
@@ -109,7 +110,10 @@ function Router() {
             {route === "learn" && (
               <Suspense
                 fallback={
-                  <div className='vd-label vd-label--dim'>Loading…</div>
+                  <p className='vd-loading' role='status'>
+                    <Loader2 size={24} className='vd-spin' color='var(--vd-brass)' />
+                    <span>Loading how to play…</span>
+                  </p>
                 }
               >
                 <LearnPage />

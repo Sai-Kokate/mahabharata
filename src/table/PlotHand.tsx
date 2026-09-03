@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, ScrollText, Sparkles, X } from "lucide-react";
-import { type TableProps, nameOf } from "./types";
+import { type TableProps } from "./types";
 
 export function PlotHand({
   room, pid, act, onDeal, onPlay, onDiscard,
@@ -52,7 +52,10 @@ export function PlotHand({
       {room.phase === "plot" && (
         <div className="vd-stack vd-stack--tight">
           <span className="vd-label">
-            <ScrollText size={11} /> {isLeader ? `Deal ${toDeal} face down` : "Plots are being dealt"}
+            <ScrollText size={13} />
+            {isLeader
+              ? `Deal ${toDeal} plot ${toDeal === 1 ? "card" : "cards"} — tap a name`
+              : "The leader is dealing plot cards"}
           </span>
           {isLeader ? (
             <div className="vd-grid3">
@@ -73,7 +76,8 @@ export function PlotHand({
             </div>
           ) : (
             <p className="vd-voice" style={{ margin: 0 }}>
-              You do not get to see what you are given until you hold it.
+              If you're dealt one, it will appear below. Nobody sees which
+              card anyone else was given.
             </p>
           )}
         </div>
@@ -82,7 +86,7 @@ export function PlotHand({
       {/* ------------------------------ my hand --------------------------- */}
       {hand.length > 0 && (
         <div className="vd-stack vd-stack--tight">
-          <span className="vd-label"><ScrollText size={11} /> Your plots</span>
+          <span className="vd-label"><ScrollText size={13} /> Your plot cards</span>
           {hand.map((h) => {
             const playable =
               h.def.kind === "instant" ? room.phase === "plot" : room.phase === h.def.window;
@@ -93,7 +97,7 @@ export function PlotHand({
               <div key={h.id} className="vd-panel" style={{ opacity: playable ? 1 : 0.55 }}>
                 <div className="vd-row" style={{ justifyContent: "space-between" }}>
                   <span className="vd-label vd-label--brass">{plotName(h.card)}</span>
-                  {!playable && <span className="vd-label vd-label--dim">not now</span>}
+                  {!playable && <span className="vd-label vd-label--dim">Can't play yet</span>}
                 </div>
                 <p className="vd-voice" style={{ margin: "7px 0 0", fontSize: 13 }}>{h.def.desc}</p>
 
@@ -103,7 +107,7 @@ export function PlotHand({
                     style={{ marginTop: 10 }}
                     onClick={act(async () => { await onPlay(h.card); setArmed(null); })}
                   >
-                    <Sparkles size={13} color="var(--vd-brass)" /> Play
+                    <Sparkles size={13} color="var(--vd-brass)" /> Play this card
                   </button>
                 )}
 
@@ -115,7 +119,7 @@ export function PlotHand({
                       onClick={() => setArmed(isArmed ? null : h.card)}
                     >
                       <Sparkles size={13} color="var(--vd-brass)" />
-                      {isArmed ? "Cancel" : "Play — choose a target"}
+                      {isArmed ? "Cancel" : "Play this card — pick who on"}
                     </button>
                     {isArmed && (
                       <div className="vd-grid2" style={{ marginTop: 8 }}>
@@ -138,8 +142,8 @@ export function PlotHand({
 
                 {blocked && (
                   <>
-                    <p className="vd-voice" style={{ margin: "7px 0 0", color: "var(--vd-red-ink)", fontSize: 13 }}>
-                      No legal target right now.
+                    <p className="vd-hint vd-hint--warn">
+                      There's nobody you can play this on right now.
                     </p>
                     {h.def.kind === "instant" && (
                       <button
@@ -147,7 +151,7 @@ export function PlotHand({
                         style={{ marginTop: 8 }}
                         onClick={act(() => onDiscard(h.card))}
                       >
-                        <X size={13} /> Set it aside
+                        <X size={13} /> Discard it
                       </button>
                     )}
                   </>
@@ -161,7 +165,7 @@ export function PlotHand({
       {/* --------------------------- private intel ------------------------ */}
       {secrets.length > 0 && (
         <div className="vd-stack vd-stack--tight">
-          <span className="vd-label"><EyeOff size={11} /> What you alone know</span>
+          <span className="vd-label"><EyeOff size={13} /> Only you know this</span>
           {secrets.map((s, i) => (
             <div key={i} className="vd-tile">
               <Eye size={13} color="var(--vd-brass)" />
@@ -172,7 +176,7 @@ export function PlotHand({
                     className="vd-tile__meta"
                     style={{ color: s.card === "fail" ? "var(--vd-red-ink)" : "var(--vd-brass)" }}
                   >
-                    {s.card === "fail" ? "Fail" : "Success"}
+                    {s.card === "fail" ? "Fail" : "Succeed"}
                   </span>
                 </>
               ) : (
@@ -182,7 +186,7 @@ export function PlotHand({
                     className="vd-tile__meta"
                     style={{ color: s.team === "evil" ? "var(--vd-red-ink)" : "var(--vd-brass)" }}
                   >
-                    {s.team === "evil" ? "against you" : "with you"}
+                    {s.team === "evil" ? "Evil" : "Good"}
                   </span>
                 </>
               )}
@@ -194,7 +198,7 @@ export function PlotHand({
       {/* ----------------------------- public log ------------------------- */}
       {(plots?.log.length ?? 0) > 0 && (
         <div className="vd-stack vd-stack--tight">
-          <span className="vd-label vd-label--dim">Plots played</span>
+          <span className="vd-label">Plot cards played so far</span>
           {plots!.log.map((l, i) => (
             <p key={i} className="vd-voice" style={{ margin: 0, fontSize: 13 }}>
               {l.byName} played <b>{plotName(l.card)}</b>

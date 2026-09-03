@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { NamePlate } from "./Parts";
+import { NamePlate, RoleBrief } from "./Parts";
 import type { Room } from "./types";
 
 const HOLD_MS = 400;
@@ -116,8 +116,8 @@ export function RoleReveal({
         onBlur={end}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {held ? <Eye size={12} /> : <EyeOff size={12} />}
-        {held ? "Release to hide" : "Hold to see your lot"}
+        {held ? <Eye size={14} /> : <EyeOff size={14} />}
+        {held ? "Let go to hide" : "Show my role"}
       </button>
 
       {held && (
@@ -126,14 +126,15 @@ export function RoleReveal({
             <span className="vd-stud-b" aria-hidden />
             <div className="vd-role__side">
               {evil
-                ? `Sworn against · ${theme.evilTeamName}`
-                : `Sworn to · ${theme.goodTeamName}`}
+                ? `You are EVIL · ${theme.evilTeamName}`
+                : `You are GOOD · ${theme.goodTeamName}`}
             </div>
             <div className="vd-role__name">{roleDef?.name ?? "—"}</div>
-            <p className="vd-voice" style={{ margin: 0 }}>{roleDef?.desc}</p>
+            <RoleBrief room={room} />
+            <p className="vd-lore" style={{ marginTop: 14 }}>{roleDef?.desc}</p>
 
             <div style={{ marginTop: 14 }}>
-              <span className="vd-label vd-label--dim">
+              <span className="vd-label">
                 {roleDef?.knowledgeLabel ?? "You are shown nothing."}
               </span>
               {me.known.length > 0 && (

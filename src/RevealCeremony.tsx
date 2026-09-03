@@ -9,6 +9,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { Check, X } from "lucide-react";
+import { settleWhenUnwatched } from "./motion";
 
 export type LastVote = {
   roundId: number;
@@ -39,8 +40,6 @@ function shuffle<T>(arr: T[]): T[] {
   }
   return a;
 }
-
-const ROMAN = ["I", "II", "III", "IV", "V"];
 
 /**
  * A reveal already shown in THIS tab, so a reconnect does not replay it.
@@ -221,6 +220,7 @@ function VoteUnveil({
         .add(() => settled.current())
         .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.15");
       // Timeline ends on the stamp. It does NOT close the plate — the player does.
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, []);
@@ -229,44 +229,52 @@ function VoteUnveil({
 
   return (
     <div ref={root} className="vd-unveil">
-      <div className="vd-label vd-unveil__eyebrow">The vote is counted</div>
-      <h2 className="vd-h1 vd-unveil__title">The council has spoken</h2>
+      <div className="vd-label vd-unveil__eyebrow">Vote result</div>
+      <h2 className="vd-hero vd-unveil__title">
+        {vote.overturnedBy
+          ? "Team cancelled"
+          : vote.approved
+            ? "Team approved"
+            : "Team voted down"}
+      </h2>
 
       <div className="vd-tally">
         <div className="vd-tally__side">
           <span className="vd-label">
-            <Check size={11} strokeWidth={2.5} /> Support
+            <Check size={13} strokeWidth={2.5} /> Voted yes
           </span>
           <strong className="vd-tally__n">{yes}</strong>
           <ul className="vd-tally__who">
             {vote.approverNames.map((nm) => <li key={nm}>{nm}</li>)}
-            {yes === 0 && <li className="is-none">no one</li>}
+            {yes === 0 && <li className="is-none">nobody</li>}
           </ul>
         </div>
         <div className="vd-tally__side vd-tally__side--no">
           <span className="vd-label">
-            <X size={11} strokeWidth={2.5} /> Oppose
+            <X size={13} strokeWidth={2.5} /> Voted no
           </span>
           <strong className="vd-tally__n">{no}</strong>
           <ul className="vd-tally__who">
             {vote.rejecterNames.map((nm) => <li key={nm}>{nm}</li>)}
-            {no === 0 && <li className="is-none">no one</li>}
+            {no === 0 && <li className="is-none">nobody</li>}
           </ul>
         </div>
       </div>
 
       <div className={`vd-stamp ${held ? "" : "vd-stamp--fallen"}`}>
         {vote.overturnedBy
-          ? "The King returns — party overturned"
+          ? "Nobody goes"
           : vote.approved
-            ? "Party rides"
-            : "Party turned away"}
+            ? "Mission goes ahead"
+            : "New leader picks"}
       </div>
 
       <p className="vd-voice vd-unveil__note">
         {vote.overturnedBy
-          ? `The council said yes (${yes}–${no}), but ${vote.overturnedBy} played King Returns. It counts as a rejection.`
-          : `Majority support is required. A tie is a rejection (${yes}–${no}).`}
+          ? `The table said yes ${yes}–${no}, but ${vote.overturnedBy} played a King Returns card to cancel it. That counts as the team being voted down.`
+          : vote.approved
+            ? `${yes} yes to ${no} no. More yes than no, so the team goes.`
+            : `${yes} yes to ${no} no. A team needs more yes than no — a tie counts as no.`}
       </p>
     </div>
   );
@@ -313,6 +321,7 @@ function QuestUnveil({
         .add(() => settled.current())
         .from(".vd-stamp", { y: 10, opacity: 0, duration: 0.4 }, "+=0.1");
       // Timeline ends on the stamp. It does NOT close the plate — the player does.
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, []);
@@ -320,11 +329,12 @@ function QuestUnveil({
   return (
     <div ref={root} className="vd-unveil">
       <div className="vd-label vd-unveil__eyebrow">
-        Quest {ROMAN[quest.questIndex] ?? quest.questIndex + 1}
+        Mission {quest.questIndex + 1} of 5
       </div>
-      <h2 className="vd-h1 vd-unveil__title">The deeds are turned over</h2>
+      <h2 className="vd-hero vd-unveil__title">The cards are in</h2>
       <p className="vd-voice vd-unveil__note">
-        Cards are anonymous. You see how many Fails were played, not who played them.
+        The order is shuffled on purpose — you learn how many Fails were
+        played, never who played them.
       </p>
 
       <div className="vd-unveil__row">
@@ -333,7 +343,7 @@ function QuestUnveil({
             <div className="vd-unveil__card-inner">
               <div className="vd-unveil__face vd-unveil__face--back" aria-hidden />
               <div className={`vd-unveil__face vd-unveil__face--front is-${kind}`}>
-                {kind === "fail" ? "Fail" : "Success"}
+                {kind === "fail" ? "Fail" : "Succeed"}
               </div>
             </div>
           </div>
@@ -342,17 +352,17 @@ function QuestUnveil({
 
       {(quest.revealed ?? []).length > 0 && (
         <p className="vd-voice vd-unveil__note">
-          Called out by We Found You:{" "}
+          A "We Found You" card forced these into the open:{" "}
           {(quest.revealed ?? [])
-            .map((r) => `${r.name} played ${r.card === "fail" ? "Fail" : "Success"}`)
-            .join(" · ")}
+            .map((r) => `${r.name} played ${r.card === "fail" ? "Fail" : "Succeed"}`)
+            .join(", ")}
         </p>
       )}
 
       <div className={`vd-stamp ${quest.success ? "" : "vd-stamp--fallen"}`}>
-        {quest.success
-          ? `Quest holds — ${quest.fails} fail${quest.fails === 1 ? "" : "s"}`
-          : `Quest falls — ${quest.fails} fail${quest.fails === 1 ? "" : "s"}`}
+        {quest.success ? "Mission succeeded" : "Mission failed"}
+        {" · "}
+        {quest.fails} Fail{quest.fails === 1 ? "" : "s"}
       </div>
     </div>
   );

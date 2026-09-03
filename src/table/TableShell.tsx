@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  BadgeCheck, Crown, LogIn, LogOut, RotateCcw, ScrollText, Shield, Sparkles,
-  XCircle,
+  BadgeCheck, Crown, Hourglass, LogIn, LogOut, RotateCcw, ScrollText, Shield,
+  Sparkles, XCircle,
 } from "lucide-react";
 import type { Account, Room } from "./types";
 import { displayName, leaderOf, partySize } from "./types";
@@ -42,36 +42,36 @@ export function TableShell({
           </div>
 
           <div className="vd-topbar__right">
-            <span className="vd-label vd-label--dim">Room {room.code}</span>
+            <span className="vd-label">Code {room.code}</span>
 
             {/* Account, rules and admin stay reachable from the board. */}
             {account.premium && (
-              <span className="vd-pill vd-pill--brass" title="Premium active">
-                <BadgeCheck size={11} /> Premium
+              <span className="vd-pill vd-pill--brass" title="Your paid plan is active">
+                <BadgeCheck size={13} /> Paid plan
               </span>
             )}
-            <a className="vd-pill" href="/rules" title="The rules">
-              <ScrollText size={11} /> Rules
+            <a className="vd-pill" href="/rules" title="Open the full rules">
+              <ScrollText size={13} /> Rules
             </a>
             {account.isAdmin && (
               <a className="vd-pill" href="/admin" title="Admin console">
-                <Shield size={11} /> Admin
+                <Shield size={13} /> Admin
               </a>
             )}
             {account.signedIn ? (
               !account.premium && (
                 <a className="vd-pill" href="/upgrade">
-                  <Crown size={11} /> Upgrade
+                  <Crown size={13} /> Paid plan
                 </a>
               )
             ) : (
               <button className="vd-pill" onClick={account.signIn}>
-                <LogIn size={11} /> Sign in
+                <LogIn size={13} /> Sign in
               </button>
             )}
             {room.seating.overflowing && (
               <span className="vd-label vd-label--brass">
-                {room.seating.seatedCount} seated · {room.seating.watcherCount} watching
+                {room.seating.seatedCount} playing · {room.seating.watcherCount} waiting
               </span>
             )}
           </div>
@@ -85,8 +85,11 @@ export function TableShell({
           <div className="vd-banner vd-banner--away" role="status">
             <span className="vd-banner__mark" aria-hidden />
             <span className="vd-banner__text">
-              {displayName(room.lastSkip.name)} ran out of time. The seal passed
-              on, and the same quest is being named again — no rejection counted.
+              {displayName(room.lastSkip.name)} ran out of time, so someone else
+              picks the team for this same mission.
+              <span className="vd-banner__sub">
+                This does not count as a rejected team.
+              </span>
             </span>
           </div>
         )}
@@ -101,9 +104,9 @@ export function TableShell({
               undifferentiated row under time pressure. */}
           {isHost && room.phase !== "lobby" && (
             <Confirm
-              label="Restart"
-              icon={<RotateCcw size={11} />}
-              ask="Restart — everyone back to the lobby?"
+              label="Start over"
+              icon={<RotateCcw size={13} />}
+              ask="Send everyone back to the setup screen and re-deal the roles? The same people and the same code stay."
               onConfirm={onRestart}
             />
           )}
@@ -116,17 +119,17 @@ export function TableShell({
           )}
           {isHost && (
             <Confirm
-              label="New council"
-              icon={<Sparkles size={11} />}
-              ask="Close this one and open a fresh council under a new code?"
+              label="New game, new code"
+              icon={<Sparkles size={13} />}
+              ask="End this game and open a new one under a different code? Everyone will have to join again."
               onConfirm={onStartFresh}
             />
           )}
           {isHost && (
             <Confirm
-              label="Close council"
-              icon={<XCircle size={11} />}
-              ask="Close the council for everyone?"
+              label="End for everyone"
+              icon={<XCircle size={13} />}
+              ask="End this game for everyone and close the table? This cannot be undone."
               onConfirm={onClose}
               danger
             />
@@ -137,12 +140,12 @@ export function TableShell({
           {/* Every participant, every phase — host included. Mid-game it keeps
               your seat so you can rejoin, which is why the wording differs. */}
           <Confirm
-            label="Leave council"
-            icon={<LogOut size={11} />}
+            label="Leave"
+            icon={<LogOut size={13} />}
             ask={
               room.phase === "lobby"
-                ? "Leave the council?"
-                : "Leave? Your seat is held — rejoin with your name to take it back."
+                ? "Leave this game?"
+                : "Leave? Your place is saved — join again with the same name to get it back."
             }
             onConfirm={async () => onLeave()}
           />
@@ -174,6 +177,16 @@ export function ActionLine({ label, value }: { label: string; value?: string }) 
   );
 }
 
+/** What the app is waiting for, when it is not waiting for you. */
+export function Waiting({ children }: { children: ReactNode }) {
+  return (
+    <p className="vd-waiting">
+      <Hourglass size={15} />
+      <span>{children}</span>
+    </p>
+  );
+}
+
 /** Corner-studded container. Reserved for objects with rank. */
 export function Studded({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -195,56 +208,101 @@ export function Studded({ children, className }: { children: ReactNode; classNam
 function PhaseBanner({ room, pid }: { room: Room; pid: string }) {
   const leader = leaderOf(room);
   const mine = leader?.playerId === pid;
-  const who = mine ? "You" : leader ? displayName(leader.name) : "The leader";
+  const who = mine ? "You" : leader ? displayName(leader.name) : "the leader";
   const riders = partySize(room);
   const watching = room.seating.iAmWatching;
+  const isHost = room.hostId === pid;
+  const seated = room.seating.seatedCount;
 
   const away = (room.seating.awayNames ?? []).map(displayName);
 
+  /**
+   * Every phase now answers the same two questions in the same order: what is
+   * happening, and whether the table is waiting on YOU. `text` is the
+   * instruction; `sub` is the rule behind it, for anyone who has not played
+   * before. The old copy stated the fiction ("You hold the seal — name 3 to
+   * ride") and left the action to be inferred.
+   */
   let text: string;
+  let sub: string | null = null;
   let urgent = false;
+
+  const onTeam = room.proposedTeam.includes(pid);
 
   switch (room.phase) {
     case "lobby":
-      text = `${room.seating.seatedCount} at the table. The host opens the council.`;
+      if (watching) {
+        text = "You're next in line for a place.";
+        sub = "You'll be seated automatically as soon as someone leaves.";
+      } else if (isHost) {
+        text = seated < 5
+          ? `Waiting for people to join — ${seated} here, ${5 - seated} more needed.`
+          : `${seated} people are in. You can start whenever you're ready.`;
+        sub = "Share the code below. You're the host, so starting is up to you.";
+      } else {
+        text = `${seated} people are in. Waiting for the host to start.`;
+        sub = "Nothing to do yet — you'll get your secret role once it starts.";
+      }
+      urgent = isHost && seated >= 5;
       break;
     case "reveal":
-      text = "The night. Everyone holds their card and reads their lot.";
+      text = watching
+        ? "Roles are being handed out. You're watching this round."
+        : "Hold your card to see your secret role.";
+      sub = watching ? null : "Keep your screen to yourself. Letting go hides it again.";
+      urgent = !watching;
       break;
     case "plot":
     case "propose":
       text = mine
-        ? `You hold the seal — name ${riders} to ride.`
-        : `${who} holds the seal and is naming ${riders} to ride.`;
+        ? `Your turn: choose ${riders} people to send on this mission.`
+        : `${who} is choosing ${riders} people for this mission.`;
+      sub = mine
+        ? "Tap names on the circle below, then send your team to a vote."
+        : "Nothing to do yet — this is the time to talk it over.";
       urgent = mine;
       break;
     case "vote":
-      text = room.voteProgress.iVoted || watching
-        ? `The council votes — ${room.voteProgress.voted} of ${room.voteProgress.total} in.`
-        : "The council votes. Your voice is still owed.";
-      urgent = !room.voteProgress.iVoted && !watching;
+      if (watching) {
+        text = `The table is voting on the team — ${room.voteProgress.voted} of ${room.voteProgress.total} in.`;
+      } else if (room.voteProgress.iVoted) {
+        text = `Your vote is in. Waiting for ${room.voteProgress.total - room.voteProgress.voted} more.`;
+        sub = "Nobody sees any vote until the last one lands.";
+      } else {
+        text = "Your turn: vote yes or no on this team.";
+        sub = "Everyone votes, not just the people on the team.";
+        urgent = true;
+      }
       break;
     case "kingReturns":
-      text = "The party is approved. The King may still overturn it.";
+      text = "The team was approved — but a plot card can still cancel it.";
+      sub = "Waiting on whoever holds that card.";
       break;
     case "quest":
-      text = room.questProgress.iSubmitted || !room.proposedTeam.includes(pid)
-        ? `The party rides — ${room.questProgress.submitted} of ${room.questProgress.total} cards in.`
-        : "You ride. Play your card.";
-      urgent = room.proposedTeam.includes(pid) && !room.questProgress.iSubmitted;
+      if (onTeam && !room.questProgress.iSubmitted) {
+        text = "Your turn: play your card for this mission.";
+        sub = "Nobody learns which card came from which person.";
+        urgent = true;
+      } else {
+        text = `The team is playing their cards — ${room.questProgress.submitted} of ${room.questProgress.total} in.`;
+        sub = onTeam ? "Your card is already in." : "You're not on this mission.";
+      }
       break;
     case "excalibur":
-      text = "Excalibur is drawn. One card may still be turned.";
+      text = "All cards are in. One of them can still be flipped.";
+      sub = "Waiting on the player holding Excalibur.";
       break;
     case "lady":
-      text = "The Lady of the Lake. One loyalty is about to be read.";
+      text = "One player is about to learn somebody's true side.";
+      sub = "Only they will see the answer — and they can lie about it.";
       break;
     case "assassin":
-      text = "Three quests held. The Assassin now names a target.";
+      text = "Three missions succeeded. The evil team gets one last guess.";
+      sub = "If they name Merlin correctly, evil wins anyway.";
       urgent = true;
       break;
     case "end":
-      text = "The reckoning. Every allegiance is open.";
+      text = "Game over. Everyone's real role is shown below.";
       break;
     default:
       text = "";
@@ -256,8 +314,11 @@ function PhaseBanner({ room, pid }: { room: Room; pid: string }) {
     <>
       <div className={`vd-banner ${urgent ? "is-urgent" : ""}`} role="status">
         <span className="vd-banner__mark" aria-hidden />
-        <span className="vd-banner__text">{text}</span>
-        {watching && <span className="vd-label vd-label--dim">watching</span>}
+        <span className="vd-banner__text">
+          {text}
+          {sub && <span className="vd-banner__sub">{sub}</span>}
+        </span>
+        {watching && <span className="vd-label vd-label--dim">Watching</span>}
       </div>
 
       {/* A seat cannot be removed mid-game without resizing the table, so an
@@ -267,9 +328,12 @@ function PhaseBanner({ room, pid }: { room: Room; pid: string }) {
         <div className="vd-banner vd-banner--away" role="status">
           <span className="vd-banner__mark" aria-hidden />
           <span className="vd-banner__text">
-            {away.join(", ")} {away.length === 1 ? "has" : "have"} left the
-            table. {away.length === 1 ? "That seat is" : "Those seats are"} held —
-            they can rejoin with the same name, or the host can restart.
+            {away.join(", ")} {away.length === 1 ? "has" : "have"} left.
+            <span className="vd-banner__sub">
+              {away.length === 1 ? "Their place is" : "Their places are"} saved —
+              they can join again with the same name. If they aren't coming
+              back, the host can use "Start over".
+            </span>
           </span>
         </div>
       )}
@@ -304,26 +368,32 @@ export function Confirm({
         disabled={disabled}
         onClick={() => setAsking(true)}
       >
-        {icon} {!compact && label}
+        {icon}
+        {!compact && label}
       </button>
     );
   }
 
+  /* "Yes" / "No" told you nothing about which one you were about to do, on
+     controls that can end a game for eight people. The confirm button now
+     repeats the action, and the way out says "Cancel". */
   return (
     <span className="vd-confirm">
       <span className="vd-confirm__ask">{ask}</span>
-      <button
-        className={`vd-textbtn ${danger ? "is-danger" : ""}`}
-        onClick={() => {
-          setAsking(false);
-          void onConfirm();
-        }}
-      >
-        Yes
-      </button>
-      <button className="vd-textbtn" onClick={() => setAsking(false)}>
-        No
-      </button>
+      <span className="vd-confirm__acts">
+        <button
+          className={`vd-confirm__yes ${danger ? "is-danger" : ""}`}
+          onClick={() => {
+            setAsking(false);
+            void onConfirm();
+          }}
+        >
+          {label}
+        </button>
+        <button className="vd-textbtn" onClick={() => setAsking(false)}>
+          Cancel
+        </button>
+      </span>
     </span>
   );
 }
@@ -351,7 +421,7 @@ function ClockAlert({ room }: { room: Room }) {
 
     const t = setTimeout(() => {
       seen.current = key;
-      setAlert("Talking time is over — one minute to name the party.");
+      setAlert("Talking time is up. The leader has one minute to pick a team.");
     }, left);
     return () => clearTimeout(t);
   }, [room.phase, room.roundId, room.discussEndsAt]);

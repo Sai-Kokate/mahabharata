@@ -9,7 +9,7 @@
 import { RefreshCw } from "lucide-react";
 import { QuestLadder } from "../TableParts";
 import { QUEST_SIZES, doubleFailQuests } from "../../convex/logic";
-import { Studded } from "./TableShell";
+import { Studded, Waiting } from "./TableShell";
 import { type TableProps, nameOf } from "./types";
 
 export function ReckoningScreen({
@@ -33,7 +33,9 @@ export function ReckoningScreen({
             {goodWon ? theme.goodTeamName : theme.evilTeamName}
           </div>
           <div className="vd-role__name" style={{ fontSize: 30 }}>
-            {goodWon ? "The realm holds" : "The realm falls"}
+            {goodWon
+              ? `${theme.goodTeamName} win`
+              : `${theme.evilTeamName} win`}
           </div>
           <p className="vd-voice" style={{ margin: 0 }}>{room.winReason}</p>
         </Studded>
@@ -48,27 +50,27 @@ export function ReckoningScreen({
 
         {room.lancelot?.swapped && (
           <p className="vd-voice">
-            The loyalty deck turned: the Lancelots ended on the opposite sides to
-            which they were dealt.
+            The two Lancelots swapped sides during the game, so each finished on
+            the opposite team to the one they started on.
           </p>
         )}
         {room.lady?.last && (
-          <p className="vd-voice" style={{ fontSize: 13 }}>
-            {room.lady.last.holderName} last looked into the water at{" "}
+          <p className="vd-hint">
+            {room.lady.last.holderName} last inspected{" "}
             {room.lady.last.targetName}.
           </p>
         )}
         {room.excalibur?.last?.used && (
-          <p className="vd-voice" style={{ fontSize: 13 }}>
-            Excalibur was turned on {room.excalibur.last.targetName} by{" "}
-            {room.excalibur.last.holderName}.
+          <p className="vd-hint">
+            {room.excalibur.last.holderName} used Excalibur to flip{" "}
+            {room.excalibur.last.targetName}'s card.
           </p>
         )}
       </div>
 
       <div className="vd-centre">
         <div className="vd-centre__wide vd-stack vd-stack--tight">
-          <span className="vd-label">The allegiances</span>
+          <span className="vd-label">Everyone's real role</span>
           {room.players.map((p) => {
             const evil = p.team === "evil";
             const isMerlin = p.role === "merlin";
@@ -89,8 +91,8 @@ export function ReckoningScreen({
                   style={{ color: evil ? "var(--vd-red-ink)" : "var(--vd-brass)" }}
                 >
                   {roleName(p.role)}
-                  {turned ? " · turned" : ""}
-                  {named.includes(p.playerId) ? " · named" : ""}
+                  {turned ? " · swapped sides" : ""}
+                  {named.includes(p.playerId) ? " · guessed" : ""}
                 </span>
               </div>
             );
@@ -98,13 +100,13 @@ export function ReckoningScreen({
 
           {room.watchers.length > 0 && (
             <>
-              <span className="vd-label vd-label--dim" style={{ marginTop: 12 }}>
-                Watched from the queue
+              <span className="vd-label" style={{ marginTop: 12 }}>
+                Watched this game
               </span>
               {room.watchers.map((w) => (
-                <div key={w.playerId} className="vd-tile" style={{ opacity: 0.6 }}>
+                <div key={w.playerId} className="vd-tile" style={{ opacity: 0.75 }}>
                   {w.name}
-                  <span className="vd-tile__meta">no role</span>
+                  <span className="vd-tile__meta">No role</span>
                 </div>
               ))}
             </>
@@ -113,28 +115,32 @@ export function ReckoningScreen({
 
         <div className="vd-centre__wide vd-actionbar">
           {isHost ? (
-            <button className="vd-btn vd-btn--primary" onClick={act(onNewGame)}>
-              <span>Wage war anew — same company</span>
-              <RefreshCw size={16} />
-            </button>
+            <>
+              <button className="vd-btn vd-btn--primary" onClick={act(onNewGame)}>
+                <span>Play again with the same people</span>
+                <RefreshCw size={16} />
+              </button>
+              <span className="vd-hint">
+                Everyone keeps their place and gets a new secret role. You can
+                change the setup before starting.
+              </span>
+            </>
           ) : (
-            <div className="vd-panel">
-              <p className="vd-voice" style={{ margin: 0 }}>
-                Waiting on the host to set the board again.
-              </p>
-            </div>
+            <Waiting>
+              Waiting for the host to start another game. Your place is kept.
+            </Waiting>
           )}
         </div>
       </div>
 
       <div className="vd-stack">
-        <span className="vd-label">What the knife did</span>
+        <span className="vd-label">The evil team's final guess</span>
         <p className="vd-voice">
           {room.assassinMode === "lovers"
-            ? `The Assassin named ${named.map((id) => nameOf(room, id)).join(" and ")}.`
+            ? `They guessed ${named.map((id) => nameOf(room, id)).join(" and ")}.`
             : room.assassinGuess
-              ? `The Assassin named ${nameOf(room, room.assassinGuess)}.`
-              : "The knife was never drawn — the quests decided it."}
+              ? `They guessed ${nameOf(room, room.assassinGuess)}.`
+              : "It never got that far — the missions decided the game."}
         </p>
       </div>
     </div>

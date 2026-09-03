@@ -11,9 +11,9 @@ import { Sword } from "lucide-react";
 import { ClockFuse } from "../TableParts";
 import { DISCUSS_MS, SELECT_MS } from "../../convex/logic";
 import { QuestColumn, ChronicleColumn, SeatRing } from "./Parts";
-import { ActionLine } from "./TableShell";
+import { ActionLine, Waiting } from "./TableShell";
 import {
-  type Room, type TableProps, ROMAN, displayName, isLeader, leaderOf, partySize,
+  type Room, type TableProps, displayName, isLeader, leaderOf, partySize,
 } from "./types";
 
 export function ProposeScreen({
@@ -60,8 +60,8 @@ export function ProposeScreen({
             totalMs={DISCUSS_MS + SELECT_MS}
             caption={
               room.discussEndsAt && Date.now() < room.discussEndsAt
-                ? "then one minute to name the party"
-                : "the seal passes on when this runs out"
+                ? "talk it over — then 1 minute to pick"
+                : "if this runs out, the next player picks instead"
             }
           />
         </div>
@@ -78,9 +78,9 @@ export function ProposeScreen({
           }
           noteFor={(p) =>
             picked.includes(p.playerId)
-              ? "Riding"
+              ? "On the team"
               : p.playerId === leader?.playerId
-                ? mine ? "Seal · you" : "Seal"
+                ? mine ? "Leader · you" : "Leader"
                 : undefined
           }
           onSelect={mine ? toggle : undefined}
@@ -94,7 +94,11 @@ export function ProposeScreen({
             <>
               {needsSword && picked.length === needed && (
                 <div className="vd-stack vd-stack--tight" style={{ marginBottom: 14 }}>
-                  <ActionLine label="Hand Excalibur to one rider" />
+                  <ActionLine label="Now pick who carries Excalibur" />
+                  <p className="vd-hint" style={{ margin: "0 0 6px" }}>
+                    They'll be able to secretly flip one other team member's
+                    card. It can't be you.
+                  </p>
                   <div className="vd-grid2">
                     {swordable.map((id) => {
                       const nm = room.players.find((p) => p.playerId === id)?.name ?? id;
@@ -107,7 +111,7 @@ export function ProposeScreen({
                         >
                           <Sword size={13} color={on ? "var(--vd-brass)" : "var(--vd-ink-dim)"} />
                           {nm}
-                          {on && <span className="vd-tile__meta">bearer</span>}
+                          {on && <span className="vd-tile__meta">Carries it</span>}
                         </button>
                       );
                     })}
@@ -115,9 +119,11 @@ export function ProposeScreen({
                 </div>
               )}
 
+              {/* The count used to read "II of III" — Roman numerals on a
+                  progress counter you are meant to check at a glance. */}
               <ActionLine
-                label="Named"
-                value={`${ROMAN[Math.max(0, picked.length - 1)] ?? picked.length} of ${ROMAN[needed - 1] ?? needed}`}
+                label="Chosen"
+                value={`${picked.length} of ${needed}`}
               />
               <button
                 className="vd-btn vd-btn--primary"
@@ -128,19 +134,30 @@ export function ProposeScreen({
                   setSword(null);
                 })}
               >
-                <span>Put the party to the council</span>
+                <span>
+                  {picked.length < needed
+                    ? `Pick ${needed - picked.length} more ${needed - picked.length === 1 ? "person" : "people"}`
+                    : !swordOk
+                      ? "Choose who carries Excalibur"
+                      : "Send this team to a vote"}
+                </span>
                 <span className="vd-btn__meta">{picked.length}/{needed}</span>
               </button>
+              <span className="vd-hint">
+                {ready
+                  ? "Everyone then votes yes or no. You can change your picks until you send it."
+                  : "Tap names on the circle above to add or remove them."}
+              </span>
             </>
           ) : (
             <>
-              <ActionLine label="Waiting" value={leader?.name.toUpperCase()} />
-              <div className="vd-panel">
-                <p className="vd-voice" style={{ margin: 0 }}>
-                  {leader ? displayName(leader.name) : "The leader"} holds the
-                  seal and is naming {needed} to ride.
-                </p>
-              </div>
+              <ActionLine label="Waiting for" value={leader ? displayName(leader.name) : "the leader"} />
+              <Waiting>
+                {leader ? displayName(leader.name) : "The leader"} is choosing{" "}
+                {needed} {needed === 1 ? "person" : "people"} to send on this
+                mission. Use this time to talk about who you trust — you'll
+                vote on their team next.
+              </Waiting>
             </>
           )}
         </div>
@@ -155,7 +172,7 @@ export function ProposeScreen({
 export function Riders({ room }: { room: Room }) {
   return (
     <div className="vd-stack vd-stack--tight">
-      <ActionLine label="Riding" />
+      <ActionLine label={`On this mission (${room.proposedTeam.length})`} />
       {room.proposedTeam.map((id) => {
         const p = room.players.find((x) => x.playerId === id);
         const sword = room.excalibur?.holderId === id;
@@ -165,7 +182,7 @@ export function Riders({ room }: { room: Room }) {
             {p?.name ?? id}
             {(sword || calledOut) && (
               <span className="vd-tile__meta" style={{ color: "#171410", opacity: 0.7 }}>
-                {sword ? "Excalibur" : ""}{sword && calledOut ? " · " : ""}{calledOut ? "Called out" : ""}
+                {sword ? "Has Excalibur" : ""}{sword && calledOut ? " · " : ""}{calledOut ? "Card revealed" : ""}
               </span>
             )}
           </div>

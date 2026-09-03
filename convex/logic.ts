@@ -602,7 +602,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "propose",
     needsTarget: false,
     name: "Lead to Victory",
-    desc: "Seize leadership: you become the leader and propose this round's party.",
+    desc: "You take over as leader and pick this round's team yourself.",
   },
   ambush: {
     id: "ambush",
@@ -610,7 +610,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "quest",
     needsTarget: true,
     name: "Ambush",
-    desc: "Secretly examine one party member's played mission card. Nobody is told. One target per player per mission.",
+    desc: "Secretly look at one team member's card. Nobody is told you looked. One person per mission.",
   },
   king_returns: {
     id: "king_returns",
@@ -618,7 +618,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "kingReturns",
     needsTarget: false,
     name: "King Returns",
-    desc: "Overturn an approved party. It counts as a rejected vote and advances the rejection track.",
+    desc: "Cancel a team the table has just approved. It counts as the team being voted down.",
   },
   we_found_you: {
     id: "we_found_you",
@@ -626,7 +626,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "vote",
     needsTarget: true,
     name: "We Found You",
-    desc: "Announce now that one party member must reveal their mission card publicly when the quest resolves.",
+    desc: "Name one team member now. When the mission resolves, their card is shown to everyone.",
   },
   restore_honor: {
     id: "restore_honor",
@@ -634,7 +634,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "none",
     needsTarget: true,
     name: "Restore Your Honor",
-    desc: "Take one plot card from another player.",
+    desc: "Take one plot card at random from another player.",
   },
   show_strength: {
     id: "show_strength",
@@ -642,7 +642,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "none",
     needsTarget: false,
     name: "Show Your Strength",
-    desc: "The leader shows you their loyalty card. You alone see it.",
+    desc: "The leader has to show you whether they are good or evil. Only you see it.",
   },
   show_true_nature: {
     id: "show_true_nature",
@@ -650,7 +650,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "none",
     needsTarget: true,
     name: "Show Your True Nature",
-    desc: "You must show your own loyalty card to a player of your choosing.",
+    desc: "You have to show one player of your choice whether you are good or evil.",
   },
   are_you_the_one: {
     id: "are_you_the_one",
@@ -658,7 +658,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "none",
     needsTarget: true,
     name: "Are You the One?",
-    desc: "Check the loyalty of one player seated next to you.",
+    desc: "Find out whether one of the players sitting next to you is good or evil.",
   },
   charge: {
     id: "charge",
@@ -666,7 +666,7 @@ export const PLOT_CARDS: Record<PlotCardId, PlotCardDef> = {
     window: "none",
     needsTarget: false,
     name: "Charge",
-    desc: "For the rest of the game your vote is revealed before everyone else's.",
+    desc: "For the rest of the game your vote is shown to everyone before theirs are.",
   },
 };
 
@@ -710,11 +710,11 @@ export function buildPlotDeck(playerCount: number): PlotCardId[] {
  * reads like the tabletop script instead of everything landing at once.
  */
 export const NIGHT_ORDER: Array<{ step: number; roles: Role[]; label: string }> = [
-  { step: 1, roles: ["assassin", "morgana", "mordred", "minion"], label: "The servants of evil know one another" },
-  { step: 2, roles: ["guinevere"], label: "Guinevere marks the two Lancelots" },
-  { step: 3, roles: ["merlin"], label: "Merlin perceives the servants of evil" },
-  { step: 4, roles: ["percival"], label: "Percival beholds Merlin and Morgana" },
-  { step: 5, roles: ["tristan", "isolde"], label: "The lovers find each other" },
+  { step: 1, roles: ["assassin", "morgana", "mordred", "minion"], label: "The evil players are shown each other" },
+  { step: 2, roles: ["guinevere"], label: "Guinevere is shown the two Lancelots" },
+  { step: 3, roles: ["merlin"], label: "Merlin is shown the evil players" },
+  { step: 4, roles: ["percival"], label: "Percival is shown Merlin and Morgana" },
+  { step: 5, roles: ["tristan", "isolde"], label: "The two lovers are shown each other" },
 ];
 
 /** Which night step a viewer's own reveal happens on (0 = no vision). */

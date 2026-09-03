@@ -78,16 +78,24 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
   };
 
   const eyebrow =
-    mode === "signUp" ? "Join the council"
-    : mode === "resetRequest" ? "Recover your account"
-    : mode === "resetVerify" ? "A code was sent"
-    : "Enter the council";
+    mode === "signUp" ? "Create an account"
+    : mode === "resetRequest" ? "Reset your password"
+    : mode === "resetVerify" ? "Check your email"
+    : "Sign in";
 
   return (
     <div className="vd-plate vd-studded vd-signin">
       <span className="vd-stud-b" aria-hidden />
 
       <div className="vd-label vd-signin__eyebrow">{eyebrow}</div>
+      {/* An account is never needed to play, so the card says so before it
+          asks for anything — the old copy only mentioned it at the bottom. */}
+      {!recovering && (
+        <p className="vd-hint" style={{ textAlign: "center", margin: "0 0 18px" }}>
+          You don't need an account to play. This is only for the paid roles and
+          settings.
+        </p>
+      )}
 
       {/* Two intents, one form — the segmented group the table uses. Hidden
           while recovering: that is a detour, not a third peer. */}
@@ -112,8 +120,9 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
 
       {mode === "resetVerify" ? (
         <p className="vd-voice vd-signin__sent">
-          <MailCheck size={14} /> If <strong>{email.trim().toLowerCase()}</strong> has
-          an account, a {RESET_CODE_LENGTH}-digit code is on its way. It lasts 15 minutes.
+          <MailCheck size={16} /> If there's an account for{" "}
+          <strong>{email.trim().toLowerCase()}</strong>, we've emailed it a{" "}
+          {RESET_CODE_LENGTH}-digit code. Type it below within 15 minutes.
         </p>
       ) : (
         <>
@@ -136,7 +145,7 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
 
       {mode === "resetVerify" && (
         <>
-          <label className="vd-field__label" htmlFor="si-code">Your code</label>
+          <label className="vd-field__label" htmlFor="si-code">The code from your email</label>
           <input
             id="si-code"
             className="vd-field vd-field--code"
@@ -164,8 +173,8 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
               autoComplete={creating || mode === "resetVerify" ? "new-password" : "current-password"}
               placeholder={
                 creating || mode === "resetVerify"
-                  ? `at least ${MIN_PASSWORD} characters`
-                  : "password"
+                  ? `At least ${MIN_PASSWORD} characters`
+                  : "Your password"
               }
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -190,25 +199,27 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
         onClick={() => void submit()}
       >
         <span>
-          {mode === "signUp" ? "Create account"
-            : mode === "resetRequest" ? "Send me a code"
-            : mode === "resetVerify" ? "Set new password"
+          {mode === "signUp" ? "Create my account"
+            : mode === "resetRequest" ? "Email me a code"
+            : mode === "resetVerify" ? "Save my new password"
             : "Sign in"}
         </span>
-        {busy ? <Loader2 size={15} className="vd-spin" /> : <KeyRound size={15} />}
+        {busy ? <Loader2 size={16} className="vd-spin" /> : <KeyRound size={16} />}
       </button>
 
-      {err && <p className="vd-errline">{err}</p>}
+      {err && (
+        <p className="vd-errline vd-panel vd-panel--danger" role="alert">{err}</p>
+      )}
 
       <div className="vd-signin__foot">
         {mode === "signIn" && (
           <button type="button" className="vd-textbtn" onClick={() => go("resetRequest")}>
-            Forgot your password?
+            I've forgotten my password
           </button>
         )}
         {recovering && (
           <button type="button" className="vd-textbtn" onClick={() => go("signIn")}>
-            <ArrowLeft size={11} /> Back to sign in
+            <ArrowLeft size={13} /> Back to sign in
           </button>
         )}
         {mode === "resetVerify" && (
@@ -217,7 +228,7 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
             className="vd-textbtn"
             onClick={() => { setCode(""); go("resetRequest"); }}
           >
-            Send another
+            Send me another code
           </button>
         )}
       </div>
@@ -225,8 +236,8 @@ export function SignInCard({ onDone }: { onDone?: () => void }) {
       {!recovering && (
         <p className="vd-voice vd-signin__note">
           {creating
-            ? "An account holds your seat and nothing else — you can play without one."
-            : "You only need an account to hold a seat or reach the console."}
+            ? "We only use your email to sign you in and to work out which plan covers you."
+            : "Signed in on a different device? The same email works everywhere."}
         </p>
       )}
     </div>
@@ -242,7 +253,7 @@ export function SignInPage() {
     <div className="vd-shell">
       <div className="vd-signin-page">
         <a className="vd-pill" href="/play">
-          <ArrowLeft size={11} /> Back to council
+          <ArrowLeft size={13} /> Back to the game
         </a>
         <SignInCard onDone={() => { navigate("/play"); }} />
       </div>

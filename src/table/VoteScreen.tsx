@@ -8,7 +8,7 @@
 import { Check, Crown, X } from "lucide-react";
 import { Plate } from "../TableParts";
 import { QuestColumn, ChronicleColumn, SeatRing } from "./Parts";
-import { ActionLine } from "./TableShell";
+import { ActionLine, Waiting } from "./TableShell";
 import { Riders } from "./ProposeScreen";
 import { type TableProps, nameOf } from "./types";
 
@@ -43,45 +43,49 @@ export function VoteScreen({
           noteFor={(p) => {
             const cast = open.find((o) => o.playerId === p.playerId);
             // Only a Charge plot card makes a vote public before the count.
-            if (cast) return cast.choice === "approve" ? "For · charge" : "Against · charge";
-            return room.proposedTeam.includes(p.playerId) ? "Riding" : undefined;
+            if (cast) return cast.choice === "approve" ? "Voted yes" : "Voted no";
+            return room.proposedTeam.includes(p.playerId) ? "On the team" : undefined;
           }}
         />
 
         <div className="vd-centre__wide vd-actionbar">
           {iAmWatching ? (
-            <div className="vd-panel">
-              <p className="vd-voice" style={{ margin: 0 }}>
-                You are watching this table. The vote is not yours to cast.
-              </p>
-            </div>
+            <Waiting>
+              You're watching this round, so you don't get a vote. You'll see
+              the result along with everyone else.
+            </Waiting>
           ) : !voted ? (
             <>
               <ActionLine
-                label="Your voice"
-                value={`${room.voteProgress.voted} of ${room.voteProgress.total} in`}
+                label="Should this team go?"
+                value={`${room.voteProgress.voted} of ${room.voteProgress.total} voted`}
               />
               <div className="vd-cards">
                 <button className="vd-card vd-card--success" onClick={act(() => onVote("approve"))}>
                   <Check size={20} />
-                  <span className="vd-card__name">Approve</span>
-                  <span className="vd-card__note">let this party ride</span>
+                  <span className="vd-card__name">Yes</span>
+                  <span className="vd-card__note">Send this team on the mission</span>
                 </button>
                 <button className="vd-card vd-card--fail" onClick={act(() => onVote("reject"))}>
                   <X size={20} />
-                  <span className="vd-card__name">Reject</span>
-                  <span className="vd-card__note">turn them away</span>
+                  <span className="vd-card__name">No</span>
+                  <span className="vd-card__note">Make someone else pick a team</span>
                 </button>
               </div>
+              <span className="vd-hint">
+                More yes votes than no and the team goes. A tie counts as no.
+                You can't change your vote afterwards.
+              </span>
             </>
           ) : (
             <>
-              <ActionLine label="Voice given" value={`${room.voteProgress.voted} of ${room.voteProgress.total}`} />
-              <div className="vd-panel">
-                <p className="vd-voice" style={{ margin: 0 }}>
-                  Your vote is sealed. Nothing is revealed until every voice is in.
-                </p>
-              </div>
+              <ActionLine label="Your vote is in" value={`${room.voteProgress.voted} of ${room.voteProgress.total} voted`} />
+              <Waiting>
+                Waiting for{" "}
+                {room.voteProgress.total - room.voteProgress.voted}{" "}
+                {room.voteProgress.total - room.voteProgress.voted === 1 ? "person" : "people"}.
+                Nobody sees any vote until the last one lands.
+              </Waiting>
             </>
           )}
         </div>
@@ -108,34 +112,42 @@ export function KingReturnsScreen({
 
   return (
     <Plate
-      eyebrow="The party is approved"
-      title={mine ? "The King may still return" : "Holding for the King's word"}
+      eyebrow="The team was approved"
+      title={mine ? "You can cancel this team" : "Waiting on a plot card"}
       action={
         mine ? (
           <div className="vd-cards">
             <button className="vd-card vd-card--fail" onClick={act(onPlay)}>
               <Crown size={18} />
-              <span className="vd-card__name">Overturn</span>
-              <span className="vd-card__note">counts as a rejection</span>
+              <span className="vd-card__name">Cancel it</span>
+              <span className="vd-card__note">Counts as the team being rejected</span>
             </button>
             <button className="vd-card vd-card--success" onClick={act(onPass)}>
               <Check size={18} />
-              <span className="vd-card__name">Let them ride</span>
-              <span className="vd-card__note">stand down</span>
+              <span className="vd-card__name">Let it go ahead</span>
+              <span className="vd-card__note">Keep your card for later</span>
             </button>
           </div>
         ) : (
-          <div className="vd-panel" style={{ textAlign: "center" }}>
-            <span className="vd-label vd-label--dim">
-              {passed.length} of {holders.length} stood down
+          <p className="vd-waiting" style={{ justifyContent: "center" }}>
+            <span>
+              {passed.length} of {holders.length} have decided to let it go
+              ahead.
             </span>
-          </div>
+          </p>
         )
       }
     >
       <p className="vd-voice" style={{ marginTop: 14, textAlign: "center" }}>
-        {room.proposedTeam.map((id) => nameOf(room, id)).join(" · ")}
+        Going on the mission:{" "}
+        {room.proposedTeam.map((id) => nameOf(room, id)).join(", ")}
       </p>
+      {mine && (
+        <p className="vd-hint" style={{ textAlign: "center" }}>
+          You hold the card that can overrule this vote. Using it burns the
+          card.
+        </p>
+      )}
     </Plate>
   );
 }

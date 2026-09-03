@@ -50,10 +50,14 @@ const CARDINALS = [90, 180, 270];
  * own width. These three bands keep that true all the way to eighteen.
  */
 function ringMetrics(n: number) {
-  if (n <= 10) return { seal: 392, seat: 88, disc: 62, name: 11.5 };
-  if (n <= 13) return { seal: 470, seat: 74, disc: 52, name: 10.5 };
-  if (n <= 16) return { seal: 530, seat: 68, disc: 46, name: 10 };
-  return { seal: 580, seat: 62, disc: 40, name: 9.5 };
+  // `name` is handed to CSS as --vd-seat-name, and the phone breakpoint scales
+  // it again — so 11.5 here rendered at 10.6px on a 375px screen, on the label
+  // that tells you who you are about to put on a mission. Every band moves up,
+  // and the ring grows a little to keep the discs from colliding.
+  if (n <= 10) return { seal: 400, seat: 92, disc: 62, name: 13 };
+  if (n <= 13) return { seal: 486, seat: 78, disc: 52, name: 12.5 };
+  if (n <= 16) return { seal: 548, seat: 72, disc: 46, name: 12 };
+  return { seal: 604, seat: 66, disc: 40, name: 11.5 };
 }
 
 export function CouncilSeal({ seats, emblemSrc, onSelect, isDisabled, className }: Props) {
@@ -62,7 +66,10 @@ export function CouncilSeal({ seats, emblemSrc, onSelect, isDisabled, className 
 
   return (
     <div
-      className={`vd-seal ${className ?? ""}`}
+      /* `--pick` turns on the dashed "you can tap these" rims. Whether the
+         ring was a control or a read-out was previously invisible: the discs
+         looked identical on the one screen where tapping them is the job. */
+      className={`vd-seal ${onSelect ? "vd-seal--pick" : ""} ${className ?? ""}`}
       style={{
         maxWidth: m.seal,
         ["--vd-seat-w" as string]: `${m.seat}px`,
@@ -102,8 +109,12 @@ export function CouncilSeal({ seats, emblemSrc, onSelect, isDisabled, className 
               ["--vd-seat-face" as string]: named ? "var(--vd-parchment)" : "var(--vd-bg-raised)",
             }}
             disabled={disabled}
-            aria-pressed={named}
-            aria-label={`${seat.name}${seat.note ? `, ${seat.note}` : ""}`}
+            aria-pressed={onSelect ? named : undefined}
+            aria-label={
+              onSelect
+                ? `${named ? "Remove" : "Add"} ${seat.name}${seat.note ? ` (${seat.note})` : ""}`
+                : `${seat.name}${seat.note ? `, ${seat.note}` : ""}`
+            }
             onClick={() => onSelect?.(seat.playerId)}
           >
             <span className="vd-seat__disc">

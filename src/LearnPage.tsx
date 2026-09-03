@@ -26,6 +26,7 @@ import {
   doubleFailQuests, plotCardsPerRound, LADY_MIN_PLAYERS,
 } from "../convex/logic";
 import { Stage } from "./learn/Stage";
+import { prefersReducedMotion, settleWhenUnwatched } from "./motion";
 import { SCENARIOS, SCENARIO_GROUPS } from "./learn/scenarios";
 import "./learn.css";
 
@@ -39,19 +40,19 @@ const CAST_ORDER = [
 
 /** What each role is actually shown on the first night, in one line. */
 const SIGHT: Record<string, string> = {
-  merlin: "Every traitor except Mordred",
-  percival: "Merlin and Morgana — but not which is which",
-  guinevere: "Both Lancelots, never their sides",
-  tristan: "Isolde, and only Isolde",
-  isolde: "Tristan, and only Tristan",
-  lancelot_good: "Nothing. And your card is forced to Succeed",
-  servant: "Nothing at all. You have only the argument",
-  assassin: "The other traitors — and the last strike is yours",
-  morgana: "The other traitors. You appear to Percival as Merlin",
-  mordred: "The other traitors. Merlin cannot see you",
-  oberon: "Nothing. No traitor knows you, and you know none",
-  lancelot_evil: "Nothing. And your card is forced to Fail",
-  minion: "The other traitors",
+  merlin: "Shown every evil player except Mordred",
+  percival: "Shown Merlin and Morgana, but not which is which",
+  guinevere: "Shown both Lancelots, but not which side each is on",
+  tristan: "Shown Isolde, and nobody else",
+  isolde: "Shown Tristan, and nobody else",
+  lancelot_good: "Shown nobody. Must always play Succeed",
+  servant: "Shown nobody. You have only the conversation to go on",
+  assassin: "Shown the other evil players, and makes the final guess",
+  morgana: "Shown the other evil players. Looks like Merlin to Percival",
+  mordred: "Shown the other evil players. Merlin cannot see you",
+  oberon: "Shown nobody, and the other evil players aren't shown you",
+  lancelot_evil: "Shown nobody. Must always play Fail",
+  minion: "Shown the other evil players",
 };
 
 export default function LearnPage() {
@@ -61,28 +62,29 @@ export default function LearnPage() {
   return (
     <div className="lx">
       <header className="lx-head">
-        <a className="rules-back" href="/">← Decevia</a>
+        <a className="vd-pill" href="/">← Back to Decevia</a>
         <h1 className="lx-title">How to play</h1>
         <p className="lx-lede">
-          Five to eighteen people sit down. Most are loyal. A few are lying, and
-          they know each other. Five quests decide it — and every quest is
-          chosen by the table, out loud, with no proof available to anybody.
+          5 to 18 people play on their own phones. Most are on the good team.
+          A few are secretly on the evil team, and they know who each other
+          are. Five missions decide it — and the group chooses who goes on
+          each one, out loud, with no way to prove anything.
         </p>
         <div className="lx-jump">
-          <a href="#watch"><Users size={12} /> Watch a round</a>
-          <a href="#table"><Swords size={12} /> How the table splits</a>
-          <a href="#cast"><Moon size={12} /> The cast</a>
-          <a href="#expansions"><Sparkles size={12} /> Expansions</a>
-          <a href="#plots"><Zap size={12} /> Plot cards</a>
+          <a href="#watch"><Users size={13} /> Watch a round</a>
+          <a href="#table"><Swords size={13} /> How many are evil</a>
+          <a href="#cast"><Moon size={13} /> The roles</a>
+          <a href="#expansions"><Sparkles size={13} /> Add-ons</a>
+          <a href="#plots"><Zap size={13} /> Plot cards</a>
         </div>
       </header>
 
       {/* ------------------------------------------------------ the stage -- */}
       <Section
         id="watch"
-        eyebrow="Watch it happen"
-        title="A round, and the ways it can go"
-        lede="Pick a scenario. It plays itself — or step through it a beat at a time."
+        eyebrow="Start here"
+        title="Watch a round play out"
+        lede="Pick one below and it plays itself, or step through it one moment at a time. Nothing here is a real game — it's a replay."
       >
         <div className="lx-picker">
           {SCENARIO_GROUPS.map((g) => (
@@ -110,14 +112,14 @@ export default function LearnPage() {
       {/* ------------------------------------------------------ the table -- */}
       <Section
         id="table"
-        eyebrow="Before anything else"
-        title="How the table splits"
-        lede="The traitor count is fixed by how many sit down, and so are the party sizes."
+        eyebrow="The numbers"
+        title="How many people are evil"
+        lede="You don't choose this — it's fixed by how many people are playing, and so is the size of each mission team."
       >
         <div className="lx-matrix" role="table">
           <div className="lx-matrix__head" role="row">
-            <span>Players</span><span>Loyal</span><span>Traitors</span>
-            <span>Quest sizes</span><span>Needs 2 fails</span>
+            <span>Players</span><span>Good</span><span>Evil</span>
+            <span>People per mission (1–5)</span><span>Needs 2 fails</span>
           </div>
           {[5, 6, 7, 8, 9, 10, 12, 15, 18].map((n) => {
             const [good, evil] = TEAM_COUNTS[n];
@@ -128,24 +130,24 @@ export default function LearnPage() {
                 <span><Sun size={11} /> {good}</span>
                 <span className="is-evil"><Flame size={11} /> {evil}</span>
                 <span className="lx-matrix__sizes">{QUEST_SIZES[n].join(" · ")}</span>
-                <span>{dbl.length ? `quest ${dbl.join(" & ")}` : "—"}</span>
+                <span>{dbl.length ? `mission ${dbl.join(" & ")}` : "none"}</span>
               </div>
             );
           })}
         </div>
         <p className="lx-foot">
-          Three quests held and the realm stands. Three lost and it falls — and
-          so does {MAX_REJECTS} parties turned away in a row, without a single
-          quest being ridden.
+          Good wins by getting three missions to succeed. Evil wins by making
+          three fail — or by getting {MAX_REJECTS} teams in a row voted down,
+          which ends the game without a single mission being played.
         </p>
       </Section>
 
       {/* ------------------------------------------------------- the night -- */}
       <Section
         id="cast"
-        eyebrow="The first night"
-        title="Who is shown what"
-        lede="Everything anyone knows for certain comes from this one minute. After it, only talk."
+        eyebrow="The roles"
+        title="Who gets shown what, and when"
+        lede="Everything anyone knows for certain comes from this one moment at the start. After it, there is only conversation."
       >
         <ol className="lx-night">
           {NIGHT_ORDER.map((s) => (
@@ -169,7 +171,7 @@ export default function LearnPage() {
                   {evil ? <Flame size={13} /> : <Sun size={13} />}
                   <h3>{role.name}</h3>
                 </header>
-                <p className="lx-role__desc">{role.desc}</p>
+                <p className="lx-role__desc vd-lore">{role.desc}</p>
                 <div className="lx-role__sees">
                   {blind ? <EyeOff size={12} /> : <Eye size={12} />}
                   <span>{sight}</span>
@@ -179,50 +181,50 @@ export default function LearnPage() {
           })}
         </div>
         <p className="lx-foot">
-          Every world renames these. The abilities never change — Krishna sees
-          exactly what Merlin sees.
+          Every setting gives these characters different names. What they can do
+          never changes — Krishna is shown exactly what Merlin is shown.
         </p>
       </Section>
 
       {/* -------------------------------------------------- the expansions -- */}
       <Section
         id="expansions"
-        eyebrow="Three ways to complicate it"
-        title="The expansions"
-        lede="Each is a separate switch. Turn on none of them and you have the printed game."
+        eyebrow="Optional extras"
+        title="The three add-ons"
+        lede="Each one is switched on separately by the host. Leave them all off and you have the basic game — which is how you should play your first one."
       >
         <div className="lx-cards3">
           <Feature
             icon={<Eye size={18} />}
             name="Lady of the Lake"
-            need={`${LADY_MIN_PLAYERS}+ players`}
+            need={`Needs ${LADY_MIN_PLAYERS}+ players`}
             beats={[
-              "After quests 2, 3 and 4, the holder learns one player's true allegiance.",
-              "Only the holder is told — and they are free to lie about it.",
-              "The token then passes to the person they examined.",
-              "Anyone who has held it can never be examined.",
+              "After missions 2, 3 and 4, one player picks somebody to inspect.",
+              "They alone are told whether that person is good or evil — and they can lie about it.",
+              "The power then passes to the person they inspected.",
+              "Anyone who has ever held it can never be inspected.",
             ]}
           />
           <Feature
             icon={<Swords size={18} />}
             name="Excalibur"
-            need="any size"
+            need="Any group size"
             beats={[
-              "The leader arms one rider — never themselves — when naming the party.",
-              "Once every card is in, the bearer may flip one other rider's card.",
-              "The table sees who was struck; only those two learn what it had been.",
-              "It can save a quest or sink a clean one.",
+              "When the leader picks a team, they hand Excalibur to one member of it — never themselves.",
+              "Once every mission card is in, that person may flip one other team member's card.",
+              "Everyone sees who was flipped; only those two ever learn which card it was.",
+              "It can rescue a failing mission, or wreck a clean one.",
             ]}
           />
           <Feature
             icon={<Sparkles size={18} />}
             name="The Lancelots"
-            need="any size"
+            need="Any group size"
             beats={[
-              "One loyal, one fallen. Neither knows the other.",
-              "Their card is forced: the fallen must Fail, the loyal must Succeed.",
-              "From round 3 a loyalty card is drawn — two of five trade their sides.",
-              "Merlin's vision was a snapshot, so a switched Lancelot still reads as evil.",
+              "Two players, one good and one evil. Neither knows who the other is.",
+              "Neither gets a choice of card: the evil one must play Fail, the good one Succeed.",
+              "From round 3 a card is drawn each round — two of the five swap their sides over.",
+              "What Merlin was shown never updates, so a swapped Lancelot still looks evil to them.",
             ]}
           />
         </div>
@@ -231,9 +233,9 @@ export default function LearnPage() {
       {/* -------------------------------------------------------- the plots -- */}
       <Section
         id="plots"
-        eyebrow="Nine cards"
-        title="Plot cards"
-        lede={`The leader deals ${plotCardsPerRound(6)} to ${plotCardsPerRound(10)} face-down cards each round, depending on the table. Who holds how many is public; which cards is not.`}
+        eyebrow="Optional extras"
+        title="The nine plot cards"
+        lede={`If the host turns these on, the leader deals ${plotCardsPerRound(6)} to ${plotCardsPerRound(10)} face-down cards each round, depending on how many are playing. Everyone can see how many cards you hold; nobody can see which.`}
       >
         {(["instant", "usable", "effect"] as const).map((kind) => {
           const cards = Object.values(PLOT_CARDS).filter((c) => c.kind === kind);
@@ -241,9 +243,9 @@ export default function LearnPage() {
           return (
             <div key={kind} className="lx-plotgroup">
               <span className="vd-label">
-                {kind === "instant" && "Resolves the moment it lands"}
-                {kind === "usable" && "Held for one specific window"}
-                {kind === "effect" && "Lasts the whole game"}
+                {kind === "instant" && "Happens the moment you play it"}
+                {kind === "usable" && "You hold it and play it at one specific point"}
+                {kind === "effect" && "Lasts the rest of the game"}
               </span>
               <div className="lx-plots">
                 {cards.map((c) => (
@@ -251,7 +253,17 @@ export default function LearnPage() {
                     <h3>{c.name}</h3>
                     <p>{c.desc}</p>
                     {c.window !== "none" && (
-                      <span className="lx-plot__when">played at: {c.window}</span>
+                      <span className="lx-plot__when">
+                        {c.window === "propose"
+                          ? "Play while a team is being picked"
+                          : c.window === "vote"
+                            ? "Play during a vote"
+                            : c.window === "quest"
+                              ? "Play during a mission"
+                              : c.window === "kingReturns"
+                                ? "Play just after a vote passes"
+                                : `Play at: ${c.window}`}
+                      </span>
                     )}
                   </article>
                 ))}
@@ -260,17 +272,17 @@ export default function LearnPage() {
           );
         })}
         <p className="lx-foot">
-          Ambush is the only one that leaves no public trace — nobody is told it
-          happened.
+          Ambush is the only one that leaves no trace — nobody is told it was
+          used, and only the person who played it sees the answer.
         </p>
       </Section>
 
       <footer className="lx-end">
-        <a className="lp-act lp-act--primary" href="/play">
-          Convene a council <ArrowRight size={16} />
+        <a className="lp-act lp-act--primary" href="/play?tab=create">
+          Start a game <ArrowRight size={16} />
         </a>
         <a className="vd-textbtn" href="/rules">
-          <ScrollText size={11} /> The full laws
+          <ScrollText size={13} /> Read the full rules
         </a>
       </footer>
     </div>
@@ -292,7 +304,7 @@ function Section({
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       setSeen(true);
       return;
     }
@@ -307,9 +319,13 @@ function Section({
   useEffect(() => {
     if (!seen || !root.current) return;
     const ctx = gsap.context(() => {
-      gsap.from(".lx-section__head > *", {
+      /* A section can cross the observer's threshold while the tab is hidden
+         (a page restored mid-scroll, a background load), and then its heading
+         is left at opacity 0 with nothing to bring it back. */
+      const tl = gsap.timeline().from(".lx-section__head > *", {
         y: 14, opacity: 0, stagger: 0.08, duration: 0.5, ease: "power3.out",
       });
+      return settleWhenUnwatched(tl);
     }, root);
     return () => ctx.revert();
   }, [seen]);

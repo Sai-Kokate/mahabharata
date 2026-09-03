@@ -13,7 +13,7 @@
 
 import { Eye, EyeOff, Sword } from "lucide-react";
 import { Studded } from "./TableShell";
-import { NamePlate } from "./Parts";
+import { NamePlate, RoleBrief } from "./Parts";
 import { useHold } from "./RoleReveal";
 import type { TableProps } from "./types";
 
@@ -44,10 +44,15 @@ export function NightScreen({
   return (
     <div className="vd-table vd-table-layout">
       <div className="vd-stack">
-        <div className="vd-label vd-label--dim">The night</div>
+        <div className="vd-label">Your secret role</div>
         <p className="vd-voice">
-          The room goes dark and each of you is shown only what you are owed.
-          Hold the card to read it; let go and it is gone.
+          Everyone has just been dealt a role. Press and hold your card to read
+          it — let go and it hides again, so nobody can read it over your
+          shoulder.
+        </p>
+        <p className="vd-hint" style={{ margin: 0 }}>
+          You only get shown this once, so read it properly now. You can check
+          it again later with the <b>Show my role</b> button at the top.
         </p>
       </div>
 
@@ -55,11 +60,12 @@ export function NightScreen({
         <div className="vd-centre__wide">
           {watching ? (
             <Studded className="vd-role">
-              <div className="vd-role__side">Watching</div>
+              <div className="vd-role__side">Watching this round</div>
               <div className="vd-role__hidden">No role</div>
               <p className="vd-voice" style={{ margin: 0 }}>
-                You are in the queue, not in the game. You will see the board and
-                hear the room, but no allegiance is yours this round.
+                You don't have a place in this game yet, so you weren't dealt a
+                role. You can watch the board and follow along, and you'll be
+                given a place as soon as one frees up.
               </p>
             </Studded>
           ) : (
@@ -67,18 +73,19 @@ export function NightScreen({
               <div className="vd-role__side">
                 {held
                   ? evil
-                    ? `Sworn against · ${theme.evilTeamName}`
-                    : `Sworn to · ${theme.goodTeamName}`
-                  : "Your allegiance · sealed"}
+                    ? `You are EVIL · ${theme.evilTeamName}`
+                    : `You are GOOD · ${theme.goodTeamName}`
+                  : "Your role · hidden"}
               </div>
 
               {held ? (
                 <>
                   <div className="vd-role__name">{roleDef?.name ?? "—"}</div>
-                  <p className="vd-voice" style={{ margin: 0 }}>{roleDef?.desc}</p>
+                  <RoleBrief room={room} />
+                  <p className="vd-lore" style={{ marginTop: 14 }}>{roleDef?.desc}</p>
 
                   <div style={{ marginTop: 16 }}>
-                    <span className="vd-label vd-label--dim">
+                    <span className="vd-label">
                       {roleDef?.knowledgeLabel ?? "You are shown nothing."}
                     </span>
                     {(me?.known.length ?? 0) > 0 && (
@@ -94,7 +101,7 @@ export function NightScreen({
                 <>
                   <div className="vd-role__hidden">— — —</div>
                   <p className="vd-voice" style={{ margin: 0 }}>
-                    Hold to read your allegiance.
+                    Press and hold the button below to see which side you're on.
                   </p>
                 </>
               )}
@@ -110,8 +117,8 @@ export function NightScreen({
                 onBlur={end}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                {held ? <Eye size={13} /> : <EyeOff size={13} />}
-                {held ? "Release to hide" : "Hold to reveal"}
+                {held ? <Eye size={15} /> : <EyeOff size={15} />}
+                {held ? "Let go to hide it" : "Press and hold to see your role"}
               </button>
             </Studded>
           )}
@@ -126,18 +133,20 @@ export function NightScreen({
                   doesn't add. A reminder in place of a live count still sets
                   the right expectation before a screen that can't be replayed. */}
               <p className="vd-voice" style={{ marginBottom: 10 }}>
-                Make sure everyone at the table has held their card and read
-                it — there's no way to replay this screen for someone who missed it.
+                Check out loud that everyone has read their role before you
+                carry on. This screen can't be shown again for someone who
+                missed it.
               </p>
               <button className="vd-btn vd-btn--primary" onClick={act(onBegin)}>
-                <span>All have read their lot — begin</span>
+                <span>Everyone's read it — start round 1</span>
                 <Sword size={16} />
               </button>
             </>
           ) : (
             <div className="vd-panel">
               <p className="vd-voice" style={{ margin: 0 }}>
-                Study it. The host opens the first council when everyone is ready.
+                Read your role. The host starts the first round once everyone
+                has — say so when you're done.
               </p>
             </div>
           )}
@@ -145,7 +154,11 @@ export function NightScreen({
       </div>
 
       <div className="vd-stack">
-        <span className="vd-label">How the night went</span>
+        <span className="vd-label">Who was shown what</span>
+        <p className="vd-hint" style={{ margin: 0 }}>
+          Roles are revealed in this fixed order. Knowing <i>when</i> you were
+          shown something is part of the game.
+        </p>
         <div>
           {steps.map((s) => {
             // Each step belongs to exactly one role — 3 is Merlin, 4 Percival,
@@ -157,21 +170,22 @@ export function NightScreen({
               <div key={s.step} className={`vd-script__row ${mine ? "is-mine" : ""}`}>
                 <span className="vd-script__n">{s.step}</span>
                 <span className="vd-script__text">{s.label}</span>
-                {mine && <span className="vd-script__you">you</span>}
+                {mine && <span className="vd-script__you">This was you</span>}
               </div>
             );
           })}
         </div>
         {!held && !watching && (
           <p className="vd-voice" style={{ margin: 0 }}>
-            Hold your card to see which of these was yours.
+            Hold your card to see which of these steps was yours.
           </p>
         )}
         {/* "No vision is yours" is itself a tell — it rules out Merlin,
             Percival, Guinevere, the lovers and the evil table in one line. */}
         {held && myStep === 0 && !watching && (
           <p className="vd-voice" style={{ margin: 0 }}>
-            You slept through all of it. No vision is yours.
+            None of these was yours — you weren't shown anything. You'll have
+            to work it out from the conversation.
           </p>
         )}
       </div>

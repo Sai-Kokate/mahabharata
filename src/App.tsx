@@ -18,7 +18,7 @@ import {
   ScrollText,
   Sword,
   X,
-  Sparkles,
+  ArrowRight,
   Loader2,
   User,
   Key,
@@ -151,8 +151,8 @@ export default function App() {
     setCode(null);
     setMsg(
       benched
-        ? "You were taken off the table. Your seat is held — join again with the same name to take it back."
-        : "The host removed you from that council. Join again whenever you like.",
+        ? "You were taken out of the game. Your place is saved — join again with the same name to get it back."
+        : "The host removed you from the game. You can join again any time.",
     );
   }, [code, evicted, benched]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -221,7 +221,7 @@ export default function App() {
   };
 
   async function createRoom() {
-    if (!name.trim()) return setMsg("Speak your name first.");
+    if (!name.trim()) return setMsg("Type your name first, so everyone can see who you are.");
     const r = await mCreate({
       playerId: pid,
       name,
@@ -237,9 +237,9 @@ export default function App() {
    * its role — the server will only hand it over when asked outright.
    */
   async function joinRoom(rejoin = false) {
-    if (!name.trim()) return setMsg("Speak your name first.");
+    if (!name.trim()) return setMsg("Type your name first, so everyone can see who you are.");
     const c = codeInput.trim().toUpperCase();
-    if (c.length !== 4) return setMsg("War-council codes are 4 letters.");
+    if (c.length !== 4) return setMsg("A game code is 4 letters — check it with whoever set the game up.");
     const r = await mJoin({ code: c, playerId: pid, name, rejoin });
     if (r.status === "nameTaken") {
       setRejoinName(name.trim());
@@ -335,7 +335,13 @@ export default function App() {
       {code && room === undefined && (
         <div className="vd-board">
           <div className="vd-content vd-center">
-            <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+            <p className="vd-loading" role="status">
+              <Loader2 size={26} className="vd-spin" color="var(--vd-brass)" />
+              <span>Joining game {code}…</span>
+              <span className="vd-hint">
+                If this doesn't finish, check the code and your connection.
+              </span>
+            </p>
           </div>
         </div>
       )}
@@ -425,24 +431,37 @@ export default function App() {
             <img src={emblemSrc} alt="" width={30} height={30} className="vd-topbar__emblem" />
             <h1 className="vd-gate__brand">DECEVIA</h1>
             <p className="vd-label vd-gate__promise">Where friends become foes</p>
-            <p className="vd-voice vd-gate__tag">{activeTheme.tagline}</p>
+            {/* An arrival straight off an invite link never sees the front
+                page, so this is the only place they can be told what the
+                thing is. It used to be the setting's tagline, which assumes
+                you already know. */}
+            <p className="vd-voice vd-gate__tag">
+              A hidden-roles game for 5 to 18 people in the same room. Some of
+              you are secretly working against the group.
+            </p>
           </header>
 
           <div className="vd-studded vd-gate__card">
             <span className="vd-stud-b" aria-hidden />
 
-            <div className="vd-seg">
+            {/* "Convene" / "Join" gave no clue that one of them needs a code
+                you may not have. The labels now say which is which. */}
+            <div className="vd-seg" role="tablist" aria-label="Start or join a game">
               <button
+                role="tab"
+                aria-selected={activeTab === "create"}
                 className={activeTab === "create" ? "is-active" : undefined}
                 onClick={() => setActiveTab("create")}
               >
-                <span className="vd-label" style={{ color: "inherit" }}>Convene</span>
+                <span className="vd-seg__label">Start a game</span>
               </button>
               <button
+                role="tab"
+                aria-selected={activeTab === "join"}
                 className={activeTab === "join" ? "is-active" : undefined}
                 onClick={() => setActiveTab("join")}
               >
-                <span className="vd-label" style={{ color: "inherit" }}>Join</span>
+                <span className="vd-seg__label">Join a game</span>
               </button>
             </div>
 
@@ -454,13 +473,17 @@ export default function App() {
               maxLength={16}
               onChange={(e) => { setName(e.target.value); setRejoinName(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") void gateSubmit(); }}
-              placeholder="unique per warrior"
+              placeholder="e.g. Priya"
+              aria-describedby="gate-name-help"
               autoComplete="nickname"
             />
+            <span className="vd-hint" id="gate-name-help">
+              This is what everyone else at the table will see.
+            </span>
 
             {activeTab === "join" && (
               <>
-                <label className="vd-field__label" htmlFor="gate-code">Council code</label>
+                <label className="vd-field__label" htmlFor="gate-code">Game code</label>
                 <input
                   id="gate-code"
                   className="vd-field vd-field--code"
@@ -469,38 +492,59 @@ export default function App() {
                   onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
                   onKeyDown={(e) => { if (e.key === "Enter") void gateSubmit(); }}
                   placeholder="ABCD"
+                  aria-describedby="gate-code-help"
                   autoCapitalize="characters"
                   autoCorrect="off"
                 />
+                <span className="vd-hint" id="gate-code-help">
+                  Four letters, from whoever started the game.
+                </span>
               </>
             )}
 
-            <p className="vd-voice vd-gate__hint">
-              {activeTab === "create"
-                ? "A new council gets a four-letter code. Share the link and the code."
-                : "Each tab needs its own name — reuse one and every window plays the same warrior."}
-            </p>
+            {/* What pressing the button will actually do. The create hint
+                used to describe the code; the join hint described a
+                multiple-browser-tab gotcha nobody at a real table has. */}
+            <div className="vd-gate__next">
+              <span className="vd-label">What happens next</span>
+              {activeTab === "create" ? (
+                <ol className="vd-steps">
+                  <li>You get a 4-letter code and a link to share.</li>
+                  <li>Everyone joins on their own phone.</li>
+                  <li>You press start once 5 or more people are in.</li>
+                </ol>
+              ) : (
+                <ol className="vd-steps">
+                  <li>You take a place at the table.</li>
+                  <li>The app deals you a secret role.</li>
+                  <li>The person who set it up starts the game.</li>
+                </ol>
+              )}
+            </div>
 
             <button className="vd-btn vd-btn--primary" onClick={gateSubmit}>
-              <span>{activeTab === "create" ? "Convene a council" : "Join the council"}</span>
-              <Sparkles size={15} />
+              <span>{activeTab === "create" ? "Create the game" : "Join the game"}</span>
+              <ArrowRight size={16} />
             </button>
 
             {rejoinName && (
               <div className="vd-panel" style={{ marginTop: 14 }}>
                 <p className="vd-voice" style={{ margin: 0 }}>
-                  <strong>{rejoinName}</strong> is already at that table. If that
-                  was you — a closed tab, a dead phone — take the seat back and
-                  your role comes with it.
+                  Someone called <strong>{rejoinName}</strong> is already in
+                  this game. If that was you — your phone died, or you closed
+                  the tab — take your place back and you keep the same role.
                 </p>
                 <button
                   className="vd-btn"
                   style={{ marginTop: 12 }}
                   onClick={wrap(() => joinRoom(true))}
                 >
-                  <span>Rejoin as {rejoinName}</span>
-                  <LogIn size={15} />
+                  <span>Yes, that's me — take my place back</span>
+                  <LogIn size={16} />
                 </button>
+                <span className="vd-hint">
+                  If it isn't you, pick a different name instead.
+                </span>
               </div>
             )}
 
@@ -508,14 +552,21 @@ export default function App() {
           </div>
 
           <div className="vd-gate__worlds">
-            <span className="vd-label">Choose a world</span>
+            {/* "Choose a world" named a concept the app never explained, and
+                the locked tiles said only "premium world" — with the reason
+                in a `title` tooltip, which never fires on a phone. */}
+            <span className="vd-label">Setting {activeTab === "create" ? "(optional)" : ""}</span>
+            <p className="vd-hint" style={{ marginTop: 4 }}>
+              A setting only changes the character names and the story. The
+              rules are identical in all of them.
+            </p>
             {activeTab === "join" ? (
               // A joiner's pick here is discarded server-side — only the
-              // host's world applies. Leaving the grid interactive implied
+              // host's setting applies. Leaving the grid interactive implied
               // otherwise.
               <p className="vd-voice" style={{ marginTop: 10 }}>
-                The world is set by the host — whatever they've chosen is
-                what you'll see once you're seated.
+                Whoever started the game picks the setting. You'll see theirs
+                once you're in.
               </p>
             ) : (
               <div className="vd-worlds" style={{ marginTop: 10 }}>
@@ -523,22 +574,34 @@ export default function App() {
                   const on = t.id === localThemeId;
                   const paid = !premium && isPremiumTheme(t.id) && !on;
                   return (
-                    <button
-                      key={t.id}
-                      className={`vd-world ${on ? "is-on" : ""}`}
-                      disabled={paid}
-                      title={paid ? `${t.name} — premium world` : t.name}
-                      onClick={() => setLocalThemeId(t.id)}
-                    >
-                      <span>
-                        <span className="vd-world__name">{t.name}</span>
-                        <span className="vd-world__sub">
-                          {paid ? "premium world" : `${t.goodTeamName} vs ${t.evilTeamName}`}
+                    <div key={t.id} className="vd-worldcell">
+                      <button
+                        className={`vd-world ${on ? "is-on" : ""}`}
+                        disabled={paid}
+                        aria-pressed={on}
+                        onClick={() => setLocalThemeId(t.id)}
+                      >
+                        <span className="vd-world__body">
+                          <span className="vd-world__name">{t.name}</span>
+                          <span className="vd-world__sub">
+                            Good: {t.goodTeamName} · Evil: {t.evilTeamName}
+                          </span>
                         </span>
-                      </span>
-                      {on && <Check size={13} color="var(--vd-brass)" style={{ marginLeft: "auto" }} />}
-                      {paid && <Lock size={12} style={{ marginLeft: "auto" }} />}
-                    </button>
+                        {on
+                          ? <span className="vd-opt__lock"><Check size={13} /> Chosen</span>
+                          : paid
+                            ? <span className="vd-opt__lock"><Lock size={11} /> Paid</span>
+                            : null}
+                      </button>
+                      {paid && (
+                        <span className="vd-hint">
+                          Included with a paid plan.{" "}
+                          <a href={signedIn ? "/upgrade" : "/signin"}>
+                            {signedIn ? "See plans" : "Sign in"}
+                          </a>
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -546,19 +609,19 @@ export default function App() {
           </div>
 
           <footer className="vd-gate__foot">
-            <a className="vd-pill" href="/learn"><BookOpen size={11} /> How to play</a>
-            <a className="vd-pill" href="/rules"><ScrollText size={11} /> Rules</a>
+            <a className="vd-pill" href="/learn"><BookOpen size={13} /> How to play</a>
+            <a className="vd-pill" href="/rules"><ScrollText size={13} /> Full rules</a>
             {signedIn ? (
               premium
-                ? <span className="vd-pill vd-pill--brass"><BadgeCheck size={11} /> Premium</span>
-                : <a className="vd-pill" href="/upgrade"><Crown size={11} /> Upgrade</a>
+                ? <span className="vd-pill vd-pill--brass"><BadgeCheck size={13} /> Paid plan</span>
+                : <a className="vd-pill" href="/upgrade"><Crown size={13} /> Paid plan</a>
             ) : (
               <a className="vd-pill" href="/signin">
-                <LogIn size={11} /> Sign in
+                <LogIn size={13} /> Sign in
               </a>
             )}
             {viewer?.isAdmin && (
-              <a className="vd-pill" href="/admin"><Shield size={11} /> Admin</a>
+              <a className="vd-pill" href="/admin"><Shield size={13} /> Admin</a>
             )}
           </footer>
         </div>
@@ -572,16 +635,18 @@ export default function App() {
         <div className="vd-content vd-gate">
           <div className="vd-studded vd-gate__card">
             <span className="vd-stud-b" aria-hidden />
-            <h2 className="vd-h2">No such council</h2>
+            <h2 className="vd-h1">We couldn't find that game</h2>
             <p className="vd-voice" style={{ marginTop: 10 }}>
-              It may have disbanded, or the code was mistyped.
+              It has probably ended, or the code has a typo in it. Check the
+              four letters with whoever set the game up and try again.
             </p>
             <button
-              className="vd-btn"
+              className="vd-btn vd-btn--primary"
               style={{ marginTop: 18 }}
               onClick={() => { setCode(null); setMsg(""); }}
             >
-              <span>Back to the gate</span>
+              <span>Try another code</span>
+              <ArrowRight size={16} />
             </button>
           </div>
         </div>
